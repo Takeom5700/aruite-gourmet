@@ -560,24 +560,36 @@ async function doSearch() {
   }
 }
 
-/* ===== ジオコーディング（国土地理院 → Nominatim） ===== */
+/* ===== ジオコーディング =====
+   住所らしい入力（○○区△△1-2-3 など）→ 国土地理院API優先。
+   駅名・スポット名 → Nominatim優先（GSIは駅名で誤ヒットするため）。 */
 async function geocode(q) {
   // 漢数字丁目の正規化
   const kan = { '一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10' };
   const norm = q.replace(/([一二三四五六七八九十])丁目/g, (_, k) => kan[k] + '丁目');
-  try {
-    const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(norm));
-    const d = await r.json();
-    if (Array.isArray(d) && d.length > 0) {
-      const [lon, lat] = d[0].geometry.coordinates; // [lon, lat] 順に注意
-      if (lat > 20 && lat < 46 && lon > 122 && lon < 154) return { lat, lon };
-    }
-  } catch (e) { /* フォールバックへ */ }
-  try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&q=' + encodeURIComponent(norm));
-    const d = await r.json();
-    if (d.length > 0) return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
-  } catch (e) { /* なし */ }
+  const looksAddress = /[都道府県市区町村]/.test(norm) && /[0-9０-９]/.test(norm) && !/駅/.test(norm);
+  const order = looksAddress ? [geocodeGsi, geocodeNominatim] : [geocodeNominatim, geocodeGsi];
+  for (const fn of order) {
+    try {
+      const loc = await fn(norm);
+      if (loc) return loc;
+    } catch (e) { /* 次へ */ }
+  }
+  return null;
+}
+async function geocodeGsi(q) {
+  const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
+  const d = await r.json();
+  if (Array.isArray(d) && d.length > 0) {
+    const [lon, lat] = d[0].geometry.coordinates; // [lon, lat] 順に注意
+    if (lat > 20 && lat < 46 && lon > 122 && lon < 154) return { lat, lon };
+  }
+  return null;
+}
+async function geocodeNominatim(q) {
+  const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&q=' + encodeURIComponent(q));
+  const d = await r.json();
+  if (d.length > 0) return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
   return null;
 }
 
@@ -719,14 +731,15 @@ function render() {
     card.className = 'shop-card';
     card.dataset.id = s.id;
     card.style.animationDelay = Math.min(i * 0.06, 0.8) + 's';
-    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}&query_place_id=&center=${s.lat},${s.lon}`;
+    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat}%2C${s.lon}`;
     card.innerHTML =
       `<span class="walk-badge">🚶 約${s.walkMin}分</span>
       <div class="shop-top">
         <div class="shop-emoji">${g.emoji}</div>
         <div>
           <div class="shop-name">${escapeHtml(s.name)}</div>
-          <div class="shop-meta">${g.label} ・ ${s.distM}m${s.opening ? '<br>🕐 ' + escapeHtml(s.opening) : ''}</div>
+          <div class="shop-meta">${g.label} ・ ${s.distM}m${s.opening ? '<br>🕐 ' + escapeHtml(s.opening) : ''}
+            ・ <a href="${gmapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent-primary)">Googleマップ</a></div>
         </div>
       </div>
       <div class="tags">
