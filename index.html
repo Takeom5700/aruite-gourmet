@@ -148,10 +148,18 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
   color: #fff; border-color: transparent; font-weight: 700;
   box-shadow: 0 4px 12px rgba(178,141,255,0.35);
 }
-select.walk-select {
-  min-height: 44px; padding: 8px 16px; border-radius: 999px;
-  border: 2px solid var(--card-border); background: #fff;
-  font-family: inherit; font-size: 0.9rem; color: var(--text-main); cursor: pointer;
+.walk-input-wrap {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 48px; padding: 0 18px; border-radius: 999px;
+  background: #fff; border: 2px solid var(--card-border);
+  font-size: 0.92rem; font-weight: 700; color: var(--text-main);
+  font-family: "Zen Maru Gothic", sans-serif;
+}
+.walk-input-wrap input[type="number"] {
+  width: 56px; min-height: 36px; text-align: center;
+  border: none; border-bottom: 2px solid var(--accent-primary);
+  font-family: inherit; font-size: 1.05rem; font-weight: 700;
+  color: var(--accent-primary); background: transparent; outline: none;
 }
 
 /* ---- メイン2カラム ---- */
@@ -278,6 +286,9 @@ footer a { color: var(--accent-primary); }
 <section class="panel">
   <div class="search-row">
     <input type="text" id="addr" placeholder="例: 渋谷駅 / 東京都新宿区西新宿2-8-1" autocomplete="off">
+    <span class="walk-input-wrap">🚶 徒歩
+      <input type="number" id="walkMin" value="20" min="1" max="30" inputmode="numeric">分以内
+    </span>
     <button class="btn btn-primary" id="searchBtn">🔍 さがす</button>
     <button class="btn btn-ghost" id="geoBtn" title="現在地から検索">📍 現在地</button>
     <button class="btn btn-ghost" id="pickBtn" title="地図をクリックして地点を指定">🗺️ 地図で指定</button>
@@ -285,13 +296,14 @@ footer a { color: var(--accent-primary); }
   <div class="search-hint">駅名・住所・スポット名でOK。「🗺️ 地図で指定」を押してから地図をクリックすると、その地点から検索できます。</div>
 
   <div class="filter-group">
-    <span class="filter-label">🚶 徒歩時間</span>
-    <select class="walk-select" id="walkMin">
-      <option value="5">徒歩5分以内（400m）</option>
-      <option value="10">徒歩10分以内（800m）</option>
-      <option value="15">徒歩15分以内（1,200m）</option>
-      <option value="20" selected>徒歩20分以内（1,600m）</option>
-    </select>
+    <span class="filter-label">🚶 徒歩時間（1〜30分で自由に指定できます）</span>
+    <div class="chips" id="walkChips">
+      <button class="chip walk-preset" data-min="5">5分（400m）</button>
+      <button class="chip walk-preset" data-min="10">10分（800m）</button>
+      <button class="chip walk-preset" data-min="15">15分（1,200m）</button>
+      <button class="chip walk-preset on" data-min="20">20分（1,600m）</button>
+      <button class="chip walk-preset" data-min="30">30分（2,400m）</button>
+    </div>
   </div>
 
   <div class="filter-group">
@@ -519,9 +531,26 @@ document.getElementById('roomChip').addEventListener('click', function () {
   this.classList.toggle('on', state.fRoom);
   render();
 });
-document.getElementById('walkMin').addEventListener('change', () => {
+const walkInput = document.getElementById('walkMin');
+walkInput.addEventListener('change', () => {
+  let v = parseInt(walkInput.value, 10);
+  if (isNaN(v)) v = 20;
+  v = Math.min(30, Math.max(1, v));
+  walkInput.value = v;
+  syncWalkChips(v);
   if (state.origin) fetchShops();
 });
+document.querySelectorAll('.walk-preset').forEach(b => {
+  b.addEventListener('click', () => {
+    walkInput.value = b.dataset.min;
+    syncWalkChips(parseInt(b.dataset.min, 10));
+    if (state.origin) fetchShops();
+  });
+});
+function syncWalkChips(v) {
+  document.querySelectorAll('.walk-preset').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.min, 10) === v));
+}
 
 /* ===== 検索アクション ===== */
 document.getElementById('searchBtn').addEventListener('click', doSearch);
@@ -612,7 +641,9 @@ function setOrigin(lat, lon, label) {
   map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] });
 }
 function walkRadius() {
-  return parseInt(document.getElementById('walkMin').value, 10) * 80; // 80m/分
+  let v = parseInt(document.getElementById('walkMin').value, 10);
+  if (isNaN(v)) v = 20;
+  return Math.min(30, Math.max(1, v)) * 80; // 80m/分
 }
 
 /* ===== Overpass取得 ===== */
