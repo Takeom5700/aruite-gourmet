@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>あるいてグルメ | 徒歩20分以内のレストラン検索</title>
-<meta name="description" content="入力した場所から徒歩20分以内のレストランを、ジャンル・予算・雰囲気・用途・個室の有無でしぼり込んで地図で探せる無料サイト。">
+<title>あるいてグルメ | 徒歩圏のレストラン検索</title>
+<meta name="description" content="入力した場所から徒歩5〜60分以内のレストランを、ジャンル・予算・雰囲気・用途・内装などでしぼり込んで地図で探せる無料サイト。">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍙</text></svg>">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,13 +127,9 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
 /* ---- フィルター ---- */
 .filter-group { margin-top: 16px; }
 .filter-label {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-weight: 700; font-size: 0.88rem; color: var(--text-main); margin-bottom: 8px;
   font-family: "Zen Maru Gothic", sans-serif;
-}
-.filter-label .est {
-  font-size: 0.68rem; font-weight: 500; color: #fff;
-  background: var(--accent-sky); border-radius: 999px; padding: 2px 8px;
 }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -148,18 +144,51 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
   color: #fff; border-color: transparent; font-weight: 700;
   box-shadow: 0 4px 12px rgba(178,141,255,0.35);
 }
-.walk-input-wrap {
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 48px; padding: 0 18px; border-radius: 999px;
-  background: #fff; border: 2px solid var(--card-border);
-  font-size: 0.92rem; font-weight: 700; color: var(--text-main);
-  font-family: "Zen Maru Gothic", sans-serif;
+.chip.warn.on {
+  background: linear-gradient(135deg, #ff8a5c, #ff9ecb);
 }
-.walk-input-wrap input[type="number"] {
-  width: 56px; min-height: 36px; text-align: center;
-  border: none; border-bottom: 2px solid var(--accent-primary);
-  font-family: inherit; font-size: 1.05rem; font-weight: 700;
-  color: var(--accent-primary); background: transparent; outline: none;
+
+/* 徒歩スライダー */
+.walk-slider-row { display: flex; align-items: center; gap: 12px; }
+.walk-val { font-weight: 900; color: var(--accent-primary); font-size: 1.1rem; font-family: "Zen Maru Gothic", sans-serif; }
+input[type="range"].walk-slider {
+  flex: 1; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  outline: none; cursor: pointer;
+}
+input[type="range"].walk-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; border: 4px solid var(--accent-primary); cursor: pointer;
+  box-shadow: 0 2px 8px rgba(178,141,255,0.4);
+}
+input[type="range"].walk-slider::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  border: 4px solid var(--accent-primary); cursor: pointer;
+}
+
+/* 国別プルダウン */
+details.genre-group {
+  background: #fff; border: 2px solid var(--card-border); border-radius: 18px;
+  padding: 4px 14px;
+}
+details.genre-group summary {
+  cursor: pointer; list-style: none; padding: 10px 4px; font-weight: 700;
+  font-size: 0.86rem; display: flex; align-items: center; gap: 6px;
+}
+details.genre-group summary::-webkit-details-marker { display: none; }
+details.genre-group summary .arrow { transition: transform 0.2s ease; margin-left: auto; }
+details.genre-group[open] summary .arrow { transform: rotate(180deg); }
+details.genre-group .chips { padding: 4px 4px 14px; }
+.badge-count {
+  font-size: 0.7rem; font-weight: 700; color: #fff; background: var(--accent-secondary);
+  border-radius: 999px; padding: 1px 8px;
+}
+
+/* キーワード・並び替え */
+.select {
+  min-height: 44px; padding: 8px 16px; border-radius: 999px;
+  border: 2px solid var(--card-border); background: #fff;
+  font-family: inherit; font-size: 0.88rem; color: var(--text-main); cursor: pointer;
 }
 
 /* ---- メイン2カラム ---- */
@@ -173,7 +202,7 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
 @media (max-width: 900px) { #map { position: static; height: 420px; } }
 
 .results-head {
-  display: flex; align-items: baseline; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 0 4px;
 }
 .results-head h2 { font-size: 1.1rem; font-weight: 700; }
@@ -209,7 +238,8 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
   100% { transform: scale(1) rotate(0deg); }
 }
 .shop-name { font-weight: 700; font-size: 1.02rem; line-height: 1.4; }
-.shop-meta { color: var(--text-sub); font-size: 0.8rem; margin-top: 3px; line-height: 1.7; }
+.shop-meta { color: var(--text-sub); font-size: 0.8rem; margin-top: 3px; line-height: 1.8; }
+.shop-meta a { color: var(--accent-primary); font-weight: 700; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .tag {
   font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
@@ -219,12 +249,20 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
 .tag.budget { background: rgba(127,224,195,0.25); color: #16755a; }
 .tag.mood { background: rgba(255,158,203,0.2); color: #b0447c; }
 .tag.room { background: rgba(142,209,255,0.25); color: #1c6ca8; }
+.tag.buffet { background: rgba(255,138,92,0.22); color: #b05a1c; }
 .walk-badge {
   position: absolute; top: 14px; right: 16px;
   font-size: 0.78rem; font-weight: 700; color: #fff;
   background: linear-gradient(135deg, var(--accent-sky), var(--accent-primary));
   border-radius: 999px; padding: 4px 12px;
 }
+.actions-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mini-btn {
+  font-size: 0.76rem; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+  background: #fff; border: 2px solid var(--card-border); color: var(--text-main);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+}
+.mini-btn:hover { border-color: var(--accent-primary); }
 
 /* ---- 状態表示 ---- */
 .status {
@@ -279,16 +317,13 @@ footer a { color: var(--accent-primary); }
     <path d="M46 55 Q50 59 54 55" fill="none" stroke="#3a3550" stroke-width="2.4" stroke-linecap="round"/>
   </svg>
   <h1>あるいてグルメ</h1>
-  <p class="lead">いまいる場所・気になる駅から、<b>あるいて行けるごはん屋さん</b>を見つけよう。<br>ジャンル・予算・雰囲気・用途・個室でしぼり込んで、地図でチェック。</p>
+  <p class="lead">いまいる場所・気になる駅から、<b>あるいて行けるごはん屋さん</b>を見つけよう。<br>ジャンル・予算・雰囲気・用途・内装でしぼり込んで、地図でチェック。</p>
 </header>
 
 <!-- 検索パネル -->
 <section class="panel">
   <div class="search-row">
     <input type="text" id="addr" placeholder="例: 渋谷駅 / 東京都新宿区西新宿2-8-1" autocomplete="off">
-    <span class="walk-input-wrap">🚶 徒歩
-      <input type="number" id="walkMin" value="20" min="1" max="30" inputmode="numeric">分以内
-    </span>
     <button class="btn btn-primary" id="searchBtn">🔍 さがす</button>
     <button class="btn btn-ghost" id="geoBtn" title="現在地から検索">📍 現在地</button>
     <button class="btn btn-ghost" id="pickBtn" title="地図をクリックして地点を指定">🗺️ 地図で指定</button>
@@ -296,41 +331,63 @@ footer a { color: var(--accent-primary); }
   <div class="search-hint">駅名・住所・スポット名でOK。「🗺️ 地図で指定」を押してから地図をクリックすると、その地点から検索できます。</div>
 
   <div class="filter-group">
-    <span class="filter-label">🚶 徒歩時間（1〜30分で自由に指定できます）</span>
-    <div class="chips" id="walkChips">
-      <button class="chip walk-preset" data-min="5">5分（400m）</button>
-      <button class="chip walk-preset" data-min="10">10分（800m）</button>
-      <button class="chip walk-preset" data-min="15">15分（1,200m）</button>
-      <button class="chip walk-preset on" data-min="20">20分（1,600m）</button>
-      <button class="chip walk-preset" data-min="30">30分（2,400m）</button>
+    <span class="filter-label">🚶 徒歩時間: <span class="walk-val" id="walkVal">20</span>分以内（5〜60分でスライダー調整）</span>
+    <div class="walk-slider-row">
+      <input type="range" class="walk-slider" id="walkSlider" min="5" max="60" step="1" value="20">
     </div>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">🔎 キーワード検索</span>
+    <input type="text" id="keyword" placeholder="店名・料理名など（例: 担々麺）" autocomplete="off" style="width:100%; min-height:44px; padding:8px 16px; border-radius:999px; border:2px solid var(--card-border); font-family:inherit; font-size:0.9rem;">
   </div>
 
   <div class="filter-group">
     <span class="filter-label">🍽️ ジャンル</span>
     <div class="chips" id="genreChips"></div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+      <details class="genre-group">
+        <summary>🌍 洋食を国で選ぶ <span class="badge-count" id="westernCount" style="display:none;"></span><span class="arrow">▼</span></summary>
+        <div class="chips" id="westernChips"></div>
+      </details>
+      <details class="genre-group">
+        <summary>🌏 アジア・エスニックを国で選ぶ <span class="badge-count" id="asianCount" style="display:none;"></span><span class="arrow">▼</span></summary>
+        <div class="chips" id="asianChips"></div>
+      </details>
+    </div>
+    <div class="chips" style="margin-top:8px;">
+      <button class="chip warn" id="excludeFamilyChip">🚫 ファミレスを除外</button>
+    </div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">💰 予算 <span class="est">推定</span></span>
+    <span class="filter-label">💰 予算
+      <span class="chips" style="display:inline-flex; gap:6px;">
+        <button class="chip on" data-mode="dinner" id="modeDinner">🌙 ディナー価格</button>
+        <button class="chip" data-mode="lunch" id="modeLunch">☀️ ランチ価格</button>
+      </span>
+    </span>
     <div class="chips" id="budgetChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🎐 雰囲気 <span class="est">推定</span></span>
+    <span class="filter-label">🎐 雰囲気</span>
     <div class="chips" id="moodChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🎯 用途 <span class="est">推定</span></span>
+    <span class="filter-label">🎯 用途</span>
     <div class="chips" id="useChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🚪 個室</span>
-    <div class="chips">
-      <button class="chip" id="roomChip">個室の可能性があるお店だけ 🚪</button>
-    </div>
+    <span class="filter-label">🪑 内装</span>
+    <div class="chips" id="interiorChips"></div>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">🍖🍺 食べ放題・飲み放題</span>
+    <div class="chips" id="buffetChips"></div>
   </div>
 </section>
 
@@ -340,8 +397,14 @@ footer a { color: var(--accent-primary); }
   <div>
     <div class="results-head">
       <h2>🍴 みつかったお店</h2>
-      <span class="results-count" id="count"></span>
+      <select class="select" id="sortSelect">
+        <option value="dist">🚶 徒歩が近い順</option>
+        <option value="budgetAsc">💰 予算が安い順</option>
+        <option value="budgetDesc">💰 予算が高い順</option>
+        <option value="name">🔤 名前順</option>
+      </select>
     </div>
+    <div class="results-count" id="count" style="margin-bottom:8px;"></div>
     <div id="cards">
       <div class="status">
         <span class="big">🍙</span>
@@ -353,7 +416,8 @@ footer a { color: var(--accent-primary); }
 
 <footer>
   データ提供: <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">© OpenStreetMap contributors</a>（Overpass API）<br>
-  予算・雰囲気・用途・個室はお店のジャンル等からの<b>推定</b>です。最新情報は各店舗の公式情報をご確認ください。<br>
+  ジャンル・予算・雰囲気・用途・内装は地図データからの自動分類のため、実際のお店の情報と異なる場合があります。<br>
+  口コミ評価・実店舗の写真・クーポン情報は本サイトの無料データ源には無いため掲載していません。正確な情報は各店舗の公式サイトやGoogleマップでご確認ください。<br>
   徒歩時間は 80m/分（不動産表記基準）の直線距離換算です。
 </footer>
 </div>
@@ -382,115 +446,237 @@ const GENRES = [
   { key: 'washoku',  label: '和食・定食',   emoji: '🍱' },
   { key: 'sushi',    label: '寿司・海鮮',   emoji: '🍣' },
   { key: 'ramen',    label: 'ラーメン・麺', emoji: '🍜' },
-  { key: 'yakiniku', label: '焼肉・焼き鳥', emoji: '🍖' },
+  { key: 'yakiniku', label: '焼肉・ホルモン', emoji: '🍖' },
+  { key: 'yakitori', label: '焼き鳥',       emoji: '🍢' },
   { key: 'izakaya',  label: '居酒屋・バー', emoji: '🍺' },
-  { key: 'italian',  label: 'イタリアン・ピザ', emoji: '🍝' },
-  { key: 'french',   label: 'フレンチ・洋食', emoji: '🥐' },
   { key: 'chinese',  label: '中華',         emoji: '🥟' },
-  { key: 'asian',    label: 'アジア・エスニック', emoji: '🍛' },
   { key: 'cafe',     label: 'カフェ・スイーツ', emoji: '☕' },
   { key: 'fast',     label: 'ファストフード', emoji: '🍔' },
   { key: 'other',    label: 'その他',       emoji: '🍽️' },
 ];
+const WESTERN_GENRES = [
+  { key: 'italian',  label: 'イタリア（ピザ含む）', emoji: '🍝' },
+  { key: 'france',   label: 'フランス', emoji: '🥐' },
+  { key: 'germany',  label: 'ドイツ',   emoji: '🥨' },
+  { key: 'spain',    label: 'スペイン', emoji: '🥘' },
+  { key: 'portugal', label: 'ポルトガル', emoji: '🐟' },
+  { key: 'uk',       label: 'イギリス', emoji: '🍽️' },
+  { key: 'finland',  label: 'フィンランド', emoji: '🫐' },
+  { key: 'australia',label: 'オーストラリア', emoji: '🦘' },
+  { key: 'usa',      label: 'アメリカ', emoji: '🇺🇸' },
+  { key: 'turkey',   label: 'トルコ',   emoji: '🥙' },
+  { key: 'western_other', label: 'その他洋食', emoji: '🍴' },
+];
+const ASIAN_GENRES = [
+  { key: 'thai',       label: 'タイ',           emoji: '🇹🇭' },
+  { key: 'vietnam',    label: 'ベトナム',       emoji: '🇻🇳' },
+  { key: 'malay_indo', label: 'マレー・インドネシア', emoji: '🇲🇾' },
+  { key: 'singapore',  label: 'シンガポール',   emoji: '🇸🇬' },
+  { key: 'asian_other',label: 'その他アジア・エスニック', emoji: '🍛' },
+];
+const ALL_GENRES = [...GENRES, ...WESTERN_GENRES, ...ASIAN_GENRES];
+const GENRE_MAP = Object.fromEntries(ALL_GENRES.map(g => [g.key, g]));
+
 const CUISINE_TO_GENRE = {
   japanese:'washoku', teishoku:'washoku', tempura:'washoku', tonkatsu:'washoku', unagi:'washoku',
-  kaiseki:'washoku', okonomiyaki:'washoku', takoyaki:'washoku', donburi:'washoku', oden:'washoku',
-  curry_rice:'washoku', gyoza:'chinese',
+  kaiseki:'washoku', okonomiyaki:'washoku', takoyaki:'washoku', donburi:'washoku', oden:'washoku', curry_rice:'washoku',
   sushi:'sushi', seafood:'sushi', fish:'sushi', sashimi:'sushi',
   ramen:'ramen', noodle:'ramen', udon:'ramen', soba:'ramen',
-  yakiniku:'yakiniku', barbecue:'yakiniku', yakitori:'yakiniku', steak:'yakiniku', horumon:'yakiniku',
+  yakiniku:'yakiniku', barbecue:'yakiniku', horumon:'yakiniku', steak:'yakiniku', steak_house:'yakiniku',
+  yakitori:'yakitori',
   izakaya:'izakaya',
-  italian:'italian', pizza:'italian', pasta:'italian',
-  french:'french', western:'french', spanish:'french', international:'french',
-  chinese:'chinese', taiwanese:'chinese', dim_sum:'chinese',
-  indian:'asian', curry:'asian', thai:'asian', korean:'asian', vietnamese:'asian',
-  asian:'asian', nepalese:'asian', mexican:'asian', kebab:'asian', turkish:'asian', indonesian:'asian',
+  chinese:'chinese', taiwanese:'chinese', dim_sum:'chinese', gyoza:'chinese',
   coffee_shop:'cafe', cake:'cafe', dessert:'cafe', ice_cream:'cafe', crepe:'cafe',
   pancake:'cafe', tea:'cafe', bubble_tea:'cafe', sandwich:'cafe', bakery:'cafe', donut:'cafe', waffle:'cafe',
   burger:'fast', chicken:'fast', fried_chicken:'fast', fried_food:'fast', hot_dog:'fast',
+  italian:'italian', pizza:'italian', pasta:'italian',
+  french:'france',
+  german:'germany',
+  spanish:'spain',
+  portuguese:'portugal',
+  british:'uk',
+  finnish:'finland',
+  australian:'australia',
+  american:'usa', diner:'usa',
+  turkish:'turkey', kebab:'turkey',
+  thai:'thai',
+  vietnamese:'vietnam',
+  malaysian:'malay_indo', indonesian:'malay_indo',
+  singaporean:'singapore',
+  indian:'asian_other', curry:'asian_other', korean:'asian_other', nepalese:'asian_other', mexican:'asian_other',
+  international:'asian_other', western:'western_other', regional:'other',
 };
 const GENRE_COLOR = {
-  washoku:'#e08a3c', sushi:'#4a90d9', ramen:'#e0563c', yakiniku:'#b05237',
-  izakaya:'#c9a227', italian:'#4caf6e', french:'#b28dff', chinese:'#d94a6b',
-  asian:'#e0813c', cafe:'#8f6f52', fast:'#e05c8a', other:'#8a84a3',
+  washoku:'#e08a3c', sushi:'#4a90d9', ramen:'#e0563c', yakiniku:'#b05237', yakitori:'#c96a2e',
+  izakaya:'#c9a227', chinese:'#d94a6b', cafe:'#8f6f52', fast:'#e05c8a', other:'#8a84a3',
+  italian:'#4caf6e', france:'#b28dff', germany:'#7a6a4f', spain:'#e0a83c', portugal:'#3c8fe0',
+  uk:'#5c6bc0', finland:'#4fb3bf', australia:'#c98a3c', usa:'#4a90d9', turkey:'#c94a4a',
+  western_other:'#8a84a3',
+  thai:'#5cbf6a', vietnam:'#e0563c', malay_indo:'#3cb0a0', singapore:'#e0a83c', asian_other:'#e0813c',
 };
+function genreColor(g) { return GENRE_COLOR[g] || '#8a84a3'; }
+function genreOf(key) { return GENRE_MAP[key] || GENRE_MAP.other; }
 
-/* ===== 予算(推定) ===== */
-const BUDGETS = [
-  { key: 'b1', label: '〜¥1,000' },
-  { key: 'b2', label: '¥1,000〜3,000' },
-  { key: 'b3', label: '¥3,000〜' },
+/* ===== ファミレス・チェーン判定 ===== */
+const FAMILY_RESTAURANT_NAMES = [
+  'デニーズ',"Denny's",'ガスト','サイゼリヤ','ジョナサン','ロイヤルホスト','バーミヤン',
+  'ココス',"COCO'S",'フォルクス','ジョイフル','夢庵','和食さと','華屋与兵衛','とんでん','びっくりドンキー',
 ];
-function estimateBudget(shop) {
-  if (shop.amenity === 'fast_food') return 'b1';
-  if (shop.genre === 'ramen' || shop.genre === 'cafe' || shop.genre === 'fast') return 'b1';
-  if (['french','sushi','yakiniku'].includes(shop.genre)) return 'b3';
-  const c = shop.cuisine || '';
-  if (['kaiseki','steak','unagi','french'].some(k => c.includes(k))) return 'b3';
-  return 'b2';
+const CHAIN_PIZZA_NAMES = ['ピザハット','Pizza Hut','ドミノ・ピザ','ドミノピザ',"Domino's",'ピザーラ'];
+function isFamilyRestaurant(shop) {
+  const n = shop.name || '';
+  const b = (shop.tags && shop.tags.brand) || '';
+  return FAMILY_RESTAURANT_NAMES.some(k => n.includes(k) || b.includes(k));
+}
+function isChainPizza(shop) {
+  const n = shop.name || '';
+  const b = (shop.tags && shop.tags.brand) || '';
+  return CHAIN_PIZZA_NAMES.some(k => n.includes(k) || b.includes(k));
 }
 
-/* ===== 雰囲気(推定) ===== */
+/* ===== 予算(ジャンル・時間帯から算出) ===== */
+const BASE_PRICE = {
+  washoku:{lunch:[800,1500],dinner:[2500,4000]}, sushi:{lunch:[1500,3000],dinner:[4000,8000]},
+  ramen:{lunch:[800,1200],dinner:[800,1300]}, yakiniku:{lunch:[1200,2000],dinner:[3500,6000]},
+  yakitori:{lunch:[1000,1500],dinner:[3000,5000]}, izakaya:{lunch:[900,1300],dinner:[3000,5000]},
+  chinese:{lunch:[800,1300],dinner:[2500,4000]}, cafe:{lunch:[900,1500],dinner:[900,1500]},
+  fast:{lunch:[500,900],dinner:[500,900]}, other:{lunch:[1000,1800],dinner:[2500,4500]},
+  italian:{lunch:[1200,2000],dinner:[3500,6000]}, france:{lunch:[2500,4000],dinner:[6000,12000]},
+  germany:{lunch:[1200,2000],dinner:[3000,5000]}, spain:{lunch:[1200,2000],dinner:[3000,5500]},
+  portugal:{lunch:[1200,2000],dinner:[3000,5000]}, uk:{lunch:[1200,2000],dinner:[3000,5000]},
+  finland:{lunch:[1500,2500],dinner:[3500,6000]}, australia:{lunch:[1200,2000],dinner:[3000,5500]},
+  usa:{lunch:[1000,1800],dinner:[2500,4500]}, turkey:{lunch:[1000,1600],dinner:[2500,4500]},
+  thai:{lunch:[1000,1600],dinner:[2500,4000]}, vietnam:{lunch:[1000,1500],dinner:[2500,4000]},
+  malay_indo:{lunch:[1000,1600],dinner:[2500,4000]}, singapore:{lunch:[1200,1800],dinner:[2800,4500]},
+  asian_other:{lunch:[900,1400],dinner:[2200,3800]},
+};
+function priceMid(shop, mode) {
+  if (shop.amenity === 'fast_food') return mode === 'lunch' ? 700 : 700;
+  if (isFamilyRestaurant(shop)) return mode === 'lunch' ? 950 : 1250;
+  const r = BASE_PRICE[shop.genre] || BASE_PRICE.other;
+  const [lo, hi] = r[mode] || r.dinner;
+  return (lo + hi) / 2;
+}
+const BUDGETS = [
+  { key: 'u800',   label: '〜¥800' },
+  { key: 'u1500',  label: '¥800〜1,500' },
+  { key: 'u3000',  label: '¥1,500〜3,000' },
+  { key: 'u5000',  label: '¥3,000〜5,000' },
+  { key: 'u10000', label: '¥5,000〜10,000' },
+  { key: 'o10000', label: '¥10,000〜' },
+];
+function budgetBucket(shop, mode) {
+  const mid = priceMid(shop, mode);
+  if (mid < 800) return 'u800';
+  if (mid < 1500) return 'u1500';
+  if (mid < 3000) return 'u3000';
+  if (mid < 5000) return 'u5000';
+  if (mid < 10000) return 'u10000';
+  return 'o10000';
+}
+
+/* ===== 雰囲気 ===== */
 const MOODS = [
   { key: 'oshare',   label: 'おしゃれ ✨' },
   { key: 'calm',     label: '落ち着いた 🍵' },
   { key: 'lively',   label: 'にぎやか 🎉' },
   { key: 'casual',   label: 'カジュアル 🎈' },
+  { key: 'luxury',   label: '高級・特別な日 💎' },
+  { key: 'hideaway', label: '隠れ家 🕯️' },
 ];
 function estimateMoods(shop) {
-  const m = new Set();
-  const g = shop.genre;
-  if (['cafe','french','italian'].includes(g)) m.add('oshare');
-  if (['washoku','sushi','french'].includes(g)) m.add('calm');
-  if (['izakaya','yakiniku'].includes(g)) m.add('lively');
-  if (['ramen','fast','cafe','asian','chinese'].includes(g)) m.add('casual');
+  const m = new Set(); const g = shop.genre;
+  const familyish = isFamilyRestaurant(shop) || g === 'fast';
+  if (!familyish && ['cafe','italian','france','singapore'].includes(g)) m.add('oshare');
+  if (['washoku','sushi','france','germany'].includes(g)) m.add('calm');
+  if (['izakaya','yakitori','yakiniku'].includes(g)) m.add('lively');
+  if (familyish || ['ramen','fast','chinese'].includes(g)) m.add('casual');
   if (shop.amenity === 'bar' || shop.amenity === 'pub') m.add('lively');
+  const dinnerMid = priceMid(shop, 'dinner');
+  if (dinnerMid >= 8000 && !familyish) m.add('luxury');
+  if (['france','sushi'].includes(g) && dinnerMid >= 5000) m.add('hideaway');
   if (m.size === 0) m.add('casual');
   return [...m];
 }
 
-/* ===== 用途(推定) ===== */
+/* ===== 用途 ===== */
 const USES = [
-  { key: 'date',    label: 'デート 💐' },
-  { key: 'family',  label: '家族・子連れ 👨‍👩‍👧' },
-  { key: 'solo',    label: 'おひとり様 🎧' },
-  { key: 'party',   label: '宴会・飲み会 🍻' },
-  { key: 'meeting', label: '打ち合わせ 💼' },
+  { key: 'date',       label: 'デート 💐' },
+  { key: 'family',     label: '家族・子連れ 👨‍👩‍👧' },
+  { key: 'solo',       label: 'おひとり様 🎧' },
+  { key: 'party',      label: '宴会・飲み会 🍻' },
+  { key: 'meeting',    label: '打ち合わせ 💼' },
+  { key: 'anniversary',label: '記念日 🎂' },
+  { key: 'girls',      label: '女子会 💅' },
+  { key: 'business',   label: '接待 🎩' },
+  { key: 'solo_drink', label: 'ひとり飲み 🍶' },
 ];
 function estimateUses(shop) {
-  const u = new Set();
-  const g = shop.genre;
-  if (['french','italian','cafe','sushi'].includes(g)) u.add('date');
-  if (['washoku','fast','chinese','italian'].includes(g) || shop.amenity === 'fast_food') u.add('family');
+  const u = new Set(); const g = shop.genre;
+  const familyish = isFamilyRestaurant(shop);
+  const excludeDate = familyish || isChainPizza(shop) || g === 'fast';
+  if (!excludeDate && ['france','italian','cafe','sushi','singapore'].includes(g)) u.add('date');
+  if (familyish || ['washoku','chinese','italian','fast'].includes(g)) u.add('family');
   if (['ramen','cafe','fast','washoku'].includes(g)) u.add('solo');
-  if (['izakaya','yakiniku','chinese'].includes(g) || shop.amenity === 'pub' || shop.amenity === 'bar') u.add('party');
-  if (g === 'cafe' || g === 'french') u.add('meeting');
+  if (['izakaya','yakiniku','yakitori','chinese'].includes(g) || shop.amenity === 'pub' || shop.amenity === 'bar') u.add('party');
+  if (['cafe','france'].includes(g) && !familyish) u.add('meeting');
+  const dinnerMid = priceMid(shop, 'dinner');
+  if (!excludeDate && dinnerMid >= 6000) u.add('anniversary');
+  if (['izakaya','cafe'].includes(g) && !familyish) u.add('girls');
+  if (['france','sushi','washoku'].includes(g) && dinnerMid >= 4000) u.add('business');
+  if (['izakaya','yakitori'].includes(g)) u.add('solo_drink');
   if (u.size === 0) u.add('solo');
   return [...u];
 }
 
-/* ===== 個室の可能性(推定) ===== */
-function estimateRoom(shop) {
+/* ===== 内装 ===== */
+const INTERIORS = [
+  { key: 'room',    label: '個室 🚪' },
+  { key: 'terrace', label: 'オープンテラス ☀️' },
+  { key: 'counter', label: 'カウンター席 🪑' },
+];
+function estimateInterior(shop) {
   const t = shop.tags || {};
-  if (t['room:private'] === 'yes' || t['private_room'] === 'yes') return true;
-  return ['izakaya','yakiniku','washoku','sushi','chinese'].includes(shop.genre)
-    && shop.amenity !== 'fast_food';
+  const room = t['room:private'] === 'yes' || t['private_room'] === 'yes' ||
+    (['izakaya','yakiniku','washoku','sushi','chinese','yakitori','france'].includes(shop.genre)
+      && shop.amenity !== 'fast_food' && !isFamilyRestaurant(shop));
+  const terrace = t.outdoor_seating === 'yes';
+  const counter = ['ramen','sushi','yakitori','izakaya'].includes(shop.genre) || t.counter === 'yes';
+  return { room, terrace, counter };
+}
+
+/* ===== 食べ放題・飲み放題 ===== */
+const BUFFETS = [
+  { key: 'eat',  label: '食べ放題あり 🍖' },
+  { key: 'drink',label: '飲み放題あり 🍺' },
+];
+function estimateBuffet(shop) {
+  const t = shop.tags || {}; const n = shop.name || '';
+  return {
+    eat: t.all_you_can_eat === 'yes' || /食べ放題|ビュッフェ|バイキング/.test(n),
+    drink: t.all_you_can_drink === 'yes' || /飲み放題/.test(n),
+  };
 }
 
 /* ===== 状態 ===== */
 const state = {
-  origin: null,          // {lat, lon, label}
-  shops: [],             // 取得済み全件
-  fGenre: new Set(),     // 選択ジャンル（空=すべて）
-  fBudget: new Set(),
+  origin: null,
+  shops: [],
+  fGenre: new Set(),
   fMood: new Set(),
   fUse: new Set(),
-  fRoom: false,
+  fInterior: new Set(),
+  fBuffet: new Set(),
+  fBudget: new Set(),
+  excludeFamily: false,
+  budgetMode: 'dinner',
+  keyword: '',
+  sortKey: 'dist',
   pickMode: false,
 };
 
 /* ===== 地図 ===== */
-const map = L.map('map').setView([35.6812, 139.7671], 13); // 東京駅
+const map = L.map('map').setView([35.6812, 139.7671], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19,
@@ -507,7 +693,7 @@ map.on('click', e => {
 });
 
 /* ===== フィルターUI生成 ===== */
-function buildChips(elId, items, set) {
+function buildChips(elId, items, set, onChange) {
   const box = document.getElementById(elId);
   items.forEach(it => {
     const b = document.createElement('button');
@@ -516,41 +702,57 @@ function buildChips(elId, items, set) {
     b.addEventListener('click', () => {
       if (set.has(it.key)) { set.delete(it.key); b.classList.remove('on'); }
       else { set.add(it.key); b.classList.add('on'); }
+      if (onChange) onChange();
       render();
     });
     box.appendChild(b);
   });
 }
 buildChips('genreChips', GENRES, state.fGenre);
+buildChips('westernChips', WESTERN_GENRES, state.fGenre, updateGroupBadges);
+buildChips('asianChips', ASIAN_GENRES, state.fGenre, updateGroupBadges);
 buildChips('budgetChips', BUDGETS, state.fBudget);
 buildChips('moodChips', MOODS, state.fMood);
 buildChips('useChips', USES, state.fUse);
+buildChips('interiorChips', INTERIORS, state.fInterior);
+buildChips('buffetChips', BUFFETS, state.fBuffet);
 
-document.getElementById('roomChip').addEventListener('click', function () {
-  state.fRoom = !state.fRoom;
-  this.classList.toggle('on', state.fRoom);
+function updateGroupBadges() {
+  const wCount = WESTERN_GENRES.filter(g => state.fGenre.has(g.key)).length;
+  const aCount = ASIAN_GENRES.filter(g => state.fGenre.has(g.key)).length;
+  const wEl = document.getElementById('westernCount'), aEl = document.getElementById('asianCount');
+  wEl.style.display = wCount ? '' : 'none'; wEl.textContent = wCount;
+  aEl.style.display = aCount ? '' : 'none'; aEl.textContent = aCount;
+}
+
+document.getElementById('excludeFamilyChip').addEventListener('click', function () {
+  state.excludeFamily = !state.excludeFamily;
+  this.classList.toggle('on', state.excludeFamily);
   render();
 });
-const walkInput = document.getElementById('walkMin');
-walkInput.addEventListener('change', () => {
-  let v = parseInt(walkInput.value, 10);
-  if (isNaN(v)) v = 20;
-  v = Math.min(30, Math.max(1, v));
-  walkInput.value = v;
-  syncWalkChips(v);
+
+document.getElementById('modeDinner').addEventListener('click', () => setBudgetMode('dinner'));
+document.getElementById('modeLunch').addEventListener('click', () => setBudgetMode('lunch'));
+function setBudgetMode(mode) {
+  state.budgetMode = mode;
+  document.getElementById('modeDinner').classList.toggle('on', mode === 'dinner');
+  document.getElementById('modeLunch').classList.toggle('on', mode === 'lunch');
+  render();
+}
+
+const keywordInput = document.getElementById('keyword');
+keywordInput.addEventListener('input', () => { state.keyword = keywordInput.value.trim().toLowerCase(); render(); });
+
+document.getElementById('sortSelect').addEventListener('change', e => { state.sortKey = e.target.value; render(); });
+
+const walkSlider = document.getElementById('walkSlider');
+const walkVal = document.getElementById('walkVal');
+walkSlider.addEventListener('input', () => {
+  walkVal.textContent = walkSlider.value;
+});
+walkSlider.addEventListener('change', () => {
   if (state.origin) fetchShops();
 });
-document.querySelectorAll('.walk-preset').forEach(b => {
-  b.addEventListener('click', () => {
-    walkInput.value = b.dataset.min;
-    syncWalkChips(parseInt(b.dataset.min, 10));
-    if (state.origin) fetchShops();
-  });
-});
-function syncWalkChips(v) {
-  document.querySelectorAll('.walk-preset').forEach(b =>
-    b.classList.toggle('on', parseInt(b.dataset.min, 10) === v));
-}
 
 /* ===== 検索アクション ===== */
 document.getElementById('searchBtn').addEventListener('click', doSearch);
@@ -593,7 +795,6 @@ async function doSearch() {
    住所らしい入力（○○区△△1-2-3 など）→ 国土地理院API優先。
    駅名・スポット名 → Nominatim優先（GSIは駅名で誤ヒットするため）。 */
 async function geocode(q) {
-  // 漢数字丁目の正規化
   const kan = { '一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10' };
   const norm = q.replace(/([一二三四五六七八九十])丁目/g, (_, k) => kan[k] + '丁目');
   const looksAddress = /[都道府県市区町村]/.test(norm) && /[0-9０-９]/.test(norm) && !/駅/.test(norm);
@@ -610,7 +811,7 @@ async function geocodeGsi(q) {
   const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
   const d = await r.json();
   if (Array.isArray(d) && d.length > 0) {
-    const [lon, lat] = d[0].geometry.coordinates; // [lon, lat] 順に注意
+    const [lon, lat] = d[0].geometry.coordinates;
     if (lat > 20 && lat < 46 && lon > 122 && lon < 154) return { lat, lon };
   }
   return null;
@@ -641,9 +842,9 @@ function setOrigin(lat, lon, label) {
   map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] });
 }
 function walkRadius() {
-  let v = parseInt(document.getElementById('walkMin').value, 10);
+  let v = parseInt(walkSlider.value, 10);
   if (isNaN(v)) v = 20;
-  return Math.min(30, Math.max(1, v)) * 80; // 80m/分
+  return Math.min(60, Math.max(5, v)) * 80; // 80m/分
 }
 
 /* ===== Overpass取得 ===== */
@@ -651,10 +852,9 @@ const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.k
 async function fetchShops() {
   if (!state.origin) return;
   const r = walkRadius();
-  // 円を更新
   if (walkCircle) { walkCircle.setRadius(r); map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] }); }
-  showStatus('spinner', 'ちかくのお店をあつめています…（10秒ほどかかることがあります）');
-  const q = `[out:json][timeout:25];
+  showStatus('spinner', 'ちかくのお店をあつめています…（範囲が広いと時間がかかることがあります）');
+  const q = `[out:json][timeout:40];
 nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|food_court|ice_cream)$"]["name"](around:${r},${state.origin.lat},${state.origin.lon});
 out center tags;`;
   let data = null;
@@ -672,6 +872,8 @@ out center tags;`;
     const lon = el.lon !== undefined ? el.lon : (el.center && el.center.lon);
     if (lat === undefined || lon === undefined) return null;
     const tags = el.tags || {};
+    // 閉業扱いのタグが付いているものは除外（安全側フィルタ）
+    if (tags.opening_hours === 'closed' || tags.disused === 'yes') return null;
     const cuisine = (tags.cuisine || '').toLowerCase();
     const firstCuisine = cuisine.split(';')[0].trim();
     let genre = CUISINE_TO_GENRE[firstCuisine] || null;
@@ -695,10 +897,11 @@ out center tags;`;
       phone: tags.phone || tags['contact:phone'] || '',
       web: tags.website || tags['contact:website'] || '',
     };
-    shop.budget = estimateBudget(shop);
     shop.moods = estimateMoods(shop);
     shop.uses = estimateUses(shop);
-    shop.room = estimateRoom(shop);
+    shop.interior = estimateInterior(shop);
+    shop.buffet = estimateBuffet(shop);
+    shop.family = isFamilyRestaurant(shop);
     return shop;
   }).filter(s => s && s.distM <= r).sort((a, b) => a.distM - b.distM);
   render();
@@ -712,21 +915,34 @@ function distKm(a, b, c, d) {
 
 /* ===== 描画 ===== */
 function filtered() {
-  return state.shops.filter(s =>
-    (state.fGenre.size === 0 || state.fGenre.has(s.genre)) &&
-    (state.fBudget.size === 0 || state.fBudget.has(s.budget)) &&
-    (state.fMood.size === 0 || s.moods.some(m => state.fMood.has(m))) &&
-    (state.fUse.size === 0 || s.uses.some(u => state.fUse.has(u))) &&
-    (!state.fRoom || s.room)
-  );
+  const kw = state.keyword;
+  return state.shops.filter(s => {
+    const budget = budgetBucket(s, state.budgetMode);
+    return (state.fGenre.size === 0 || state.fGenre.has(s.genre)) &&
+      (state.fBudget.size === 0 || state.fBudget.has(budget)) &&
+      (state.fMood.size === 0 || s.moods.some(m => state.fMood.has(m))) &&
+      (state.fUse.size === 0 || s.uses.some(u => state.fUse.has(u))) &&
+      (state.fInterior.size === 0 || [...state.fInterior].some(k => s.interior[k])) &&
+      (state.fBuffet.size === 0 || [...state.fBuffet].some(k => s.buffet[k])) &&
+      (!state.excludeFamily || !s.family) &&
+      (!kw || s.name.toLowerCase().includes(kw) || (s.cuisine && s.cuisine.includes(kw)) || genreOf(s.genre).label.toLowerCase().includes(kw));
+  });
+}
+function sortList(list) {
+  const arr = list.slice();
+  if (state.sortKey === 'dist') arr.sort((a, b) => a.distM - b.distM);
+  else if (state.sortKey === 'budgetAsc') arr.sort((a, b) => priceMid(a, state.budgetMode) - priceMid(b, state.budgetMode));
+  else if (state.sortKey === 'budgetDesc') arr.sort((a, b) => priceMid(b, state.budgetMode) - priceMid(a, state.budgetMode));
+  else if (state.sortKey === 'name') arr.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  return arr;
 }
 
 function render() {
   if (!state.origin) return;
-  const list = filtered();
+  const list = sortList(filtered());
   const cards = document.getElementById('cards');
   document.getElementById('count').textContent =
-    `${list.length}件 / 全${state.shops.length}件（${state.origin.label}から徒歩${document.getElementById('walkMin').value}分圏）`;
+    `${list.length}件 / 全${state.shops.length}件（${state.origin.label}から徒歩${walkSlider.value}分圏）`;
 
   markerLayer.clearLayers();
   Object.keys(markerById).forEach(k => delete markerById[k]);
@@ -737,17 +953,15 @@ function render() {
     return;
   }
 
-  const genreMap = Object.fromEntries(GENRES.map(g => [g.key, g]));
-  const budgetMap = Object.fromEntries(BUDGETS.map(b => [b.key, b.label]));
   const moodMap = Object.fromEntries(MOODS.map(m => [m.key, m.label]));
   const useMap = Object.fromEntries(USES.map(u => [u.key, u.label]));
+  const budgetMap = Object.fromEntries(BUDGETS.map(b => [b.key, b.label]));
 
   list.forEach((s, i) => {
-    const g = genreMap[s.genre];
-    // マーカー
+    const g = genreOf(s.genre);
     const mk = L.circleMarker([s.lat, s.lon], {
       radius: 8, color: '#fff', weight: 2,
-      fillColor: GENRE_COLOR[s.genre], fillOpacity: 0.92,
+      fillColor: genreColor(s.genre), fillOpacity: 0.92,
     }).bindPopup(
       `<span class="popup-name">${g.emoji} ${escapeHtml(s.name)}</span><br>` +
       `<span class="popup-sub">${g.label} ・ 徒歩約${s.walkMin}分（${s.distM}m）</span>` +
@@ -757,28 +971,39 @@ function render() {
     mk.addTo(markerLayer);
     markerById[s.id] = mk;
 
-    // カード
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.dataset.id = s.id;
     card.style.animationDelay = Math.min(i * 0.06, 0.8) + 's';
-    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat}%2C${s.lon}`;
+    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + ' ' + s.lat + ',' + s.lon)}`;
+    const photoUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(s.name)}`;
+    const budget = budgetBucket(s, state.budgetMode);
+    const hoursText = s.opening ? escapeHtml(s.opening) : '営業時間情報なし（公式サイト等でご確認ください）';
     card.innerHTML =
       `<span class="walk-badge">🚶 約${s.walkMin}分</span>
       <div class="shop-top">
         <div class="shop-emoji">${g.emoji}</div>
         <div>
           <div class="shop-name">${escapeHtml(s.name)}</div>
-          <div class="shop-meta">${g.label} ・ ${s.distM}m${s.opening ? '<br>🕐 ' + escapeHtml(s.opening) : ''}
-            ・ <a href="${gmapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent-primary)">Googleマップ</a></div>
+          <div class="shop-meta">${g.label} ・ ${s.distM}m<br>🕐 ${hoursText}</div>
         </div>
       </div>
       <div class="tags">
         <span class="tag genre">${g.label}</span>
-        <span class="tag budget">💰 ${budgetMap[s.budget]}<small>(推定)</small></span>
+        <span class="tag budget">💰 ${budgetMap[budget]}</span>
         ${s.moods.map(m => `<span class="tag mood">${moodMap[m]}</span>`).join('')}
         ${s.uses.map(u => `<span class="tag">${useMap[u]}</span>`).join('')}
-        ${s.room ? '<span class="tag room">🚪 個室の可能性</span>' : ''}
+        ${s.interior.room ? '<span class="tag room">🚪 個室</span>' : ''}
+        ${s.interior.terrace ? '<span class="tag room">☀️ テラス</span>' : ''}
+        ${s.interior.counter ? '<span class="tag room">🪑 カウンター</span>' : ''}
+        ${s.buffet.eat ? '<span class="tag buffet">🍖 食べ放題</span>' : ''}
+        ${s.buffet.drink ? '<span class="tag buffet">🍺 飲み放題</span>' : ''}
+      </div>
+      <div class="actions-row">
+        <a class="mini-btn" href="${gmapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🗺️ Googleマップ</a>
+        <a class="mini-btn" href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📷 写真を見る</a>
+        ${s.web ? `<a class="mini-btn" href="${escapeHtml(s.web)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 予約・公式サイト</a>` : ''}
+        ${s.phone ? `<a class="mini-btn" href="tel:${escapeHtml(s.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">📞 ${escapeHtml(s.phone)}</a>` : ''}
       </div>`;
     card.addEventListener('click', () => {
       map.setView([s.lat, s.lon], Math.max(map.getZoom(), 17));
@@ -786,8 +1011,19 @@ function render() {
       if (mk2) mk2.openPopup();
       highlightCard(s.id, false);
     });
+    card.addEventListener('mouseenter', () => setMarkerHover(s.id, true));
+    card.addEventListener('mouseleave', () => setMarkerHover(s.id, false));
     cards.appendChild(card);
   });
+}
+
+function setMarkerHover(id, on) {
+  const mk = markerById[id];
+  if (!mk) return;
+  mk.setStyle(on
+    ? { radius: 13, weight: 4, color: '#ff9ecb' }
+    : { radius: 8, weight: 2, color: '#fff' });
+  if (on) mk.bringToFront();
 }
 
 function highlightCard(id, scroll = true) {
