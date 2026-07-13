@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>あるいてグルメ | 徒歩圏のレストラン検索</title>
-<meta name="description" content="入力した場所から徒歩5〜60分以内のレストランを、ジャンル・予算・雰囲気・用途・内装などでしぼり込んで地図で探せる無料サイト。">
+<meta name="description" content="入力した場所から徒歩圏内のレストランを、ジャンル・予算・雰囲気・用途・個室などでしぼり込んで地図で探せる無料サイト。ホットペッパーグルメの実データを使用。">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍙</text></svg>">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +34,6 @@ body {
 }
 h1, h2, h3, .heading { font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif; }
 
-/* ---- 背景の光玉 ---- */
 .blob {
   position: fixed; border-radius: 50%; filter: blur(48px); opacity: 0.5;
   z-index: 0; pointer-events: none; animation: drift 14s ease-in-out infinite;
@@ -52,7 +51,6 @@ h1, h2, h3, .heading { font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", sans
   66% { transform: translate(-28px, 24px) scale(0.95); }
 }
 
-/* ---- ドリフター（食べ物絵文字） ---- */
 .drifter {
   position: fixed; top: -60px; z-index: 0; pointer-events: none;
   font-size: 22px; animation: fall linear infinite; opacity: 0;
@@ -73,7 +71,6 @@ h1, h2, h3, .heading { font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", sans
   50% { transform: translateY(-10px) rotate(8deg); }
 }
 
-/* ---- レイアウト ---- */
 .wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 16px 80px; }
 
 header { text-align: center; padding: 56px 12px 36px; position: relative; }
@@ -89,7 +86,6 @@ header h1 {
 }
 header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; line-height: 1.9; }
 
-/* ---- 検索パネル ---- */
 .panel {
   background: var(--card-bg); backdrop-filter: blur(6px);
   border: 1px solid var(--card-border); border-radius: 24px;
@@ -124,7 +120,6 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
 .btn-ghost.active { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
 .search-hint { margin-top: 10px; font-size: 0.8rem; color: var(--text-sub); line-height: 1.8; }
 
-/* ---- フィルター ---- */
 .filter-group { margin-top: 16px; }
 .filter-label {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -144,11 +139,8 @@ header p.lead { color: var(--text-sub); margin-top: 10px; font-size: 0.95rem; li
   color: #fff; border-color: transparent; font-weight: 700;
   box-shadow: 0 4px 12px rgba(178,141,255,0.35);
 }
-.chip.warn.on {
-  background: linear-gradient(135deg, #ff8a5c, #ff9ecb);
-}
+.chip.warn.on { background: linear-gradient(135deg, #ff8a5c, #ff9ecb); }
 
-/* 徒歩スライダー */
 .walk-slider-row { display: flex; align-items: center; gap: 12px; }
 .walk-val { font-weight: 900; color: var(--accent-primary); font-size: 1.1rem; font-family: "Zen Maru Gothic", sans-serif; }
 input[type="range"].walk-slider {
@@ -165,8 +157,8 @@ input[type="range"].walk-slider::-moz-range-thumb {
   width: 24px; height: 24px; border-radius: 50%; background: #fff;
   border: 4px solid var(--accent-primary); cursor: pointer;
 }
+.walk-note { font-size: 0.76rem; color: var(--text-sub); margin-top: 6px; }
 
-/* 国別プルダウン */
 details.genre-group {
   background: #fff; border: 2px solid var(--card-border); border-radius: 18px;
   padding: 4px 14px;
@@ -183,15 +175,17 @@ details.genre-group .chips { padding: 4px 4px 14px; }
   font-size: 0.7rem; font-weight: 700; color: #fff; background: var(--accent-secondary);
   border-radius: 999px; padding: 1px 8px;
 }
+.est-note {
+  font-size: 0.68rem; font-weight: 500; color: #fff;
+  background: var(--accent-sky); border-radius: 999px; padding: 2px 8px;
+}
 
-/* キーワード・並び替え */
 .select {
   min-height: 44px; padding: 8px 16px; border-radius: 999px;
   border: 2px solid var(--card-border); background: #fff;
   font-family: inherit; font-size: 0.88rem; color: var(--text-main); cursor: pointer;
 }
 
-/* ---- メイン2カラム ---- */
 .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
 #map {
@@ -210,7 +204,6 @@ details.genre-group .chips { padding: 4px 4px 14px; }
 #cards { display: flex; flex-direction: column; gap: 12px; max-height: 560px; overflow-y: auto; padding: 4px; }
 @media (max-width: 900px) { #cards { max-height: none; } }
 
-/* ---- カード ---- */
 .shop-card {
   background: var(--card-bg); border: 1px solid var(--card-border);
   border-radius: 20px; box-shadow: var(--shadow); padding: 16px 18px;
@@ -225,16 +218,20 @@ details.genre-group .chips { padding: 4px 4px 14px; }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .shop-top { display: flex; gap: 12px; align-items: flex-start; }
+.shop-photo {
+  width: 72px; height: 72px; flex-shrink: 0; border-radius: 16px;
+  object-fit: cover; background: var(--bg-soft);
+}
 .shop-emoji {
-  font-size: 30px; flex-shrink: 0; width: 52px; height: 52px;
+  font-size: 30px; flex-shrink: 0; width: 72px; height: 72px;
   display: grid; place-items: center; border-radius: 16px;
   background: var(--bg-soft);
 }
-.shop-card:hover .shop-emoji { animation: icon-pop 0.5s ease; }
+.shop-card:hover .shop-photo, .shop-card:hover .shop-emoji { animation: icon-pop 0.5s ease; }
 @keyframes icon-pop {
   0%   { transform: scale(1) rotate(0deg); }
-  40%  { transform: scale(1.25) rotate(-10deg); }
-  70%  { transform: scale(0.95) rotate(6deg); }
+  40%  { transform: scale(1.06) rotate(-2deg); }
+  70%  { transform: scale(0.98) rotate(1deg); }
   100% { transform: scale(1) rotate(0deg); }
 }
 .shop-name { font-weight: 700; font-size: 1.02rem; line-height: 1.4; }
@@ -264,7 +261,6 @@ details.genre-group .chips { padding: 4px 4px 14px; }
 }
 .mini-btn:hover { border-color: var(--accent-primary); }
 
-/* ---- 状態表示 ---- */
 .status {
   text-align: center; padding: 44px 16px; color: var(--text-sub); line-height: 2;
   background: var(--card-bg); border: 1px dashed var(--card-border); border-radius: 20px;
@@ -283,7 +279,6 @@ footer {
 }
 footer a { color: var(--accent-primary); }
 
-/* Leafletポップアップの角丸 */
 .leaflet-popup-content-wrapper { border-radius: 16px; font-family: inherit; }
 .leaflet-popup-content { margin: 12px 16px; line-height: 1.7; }
 .popup-name { font-weight: 700; }
@@ -317,10 +312,9 @@ footer a { color: var(--accent-primary); }
     <path d="M46 55 Q50 59 54 55" fill="none" stroke="#3a3550" stroke-width="2.4" stroke-linecap="round"/>
   </svg>
   <h1>あるいてグルメ</h1>
-  <p class="lead">いまいる場所・気になる駅から、<b>あるいて行けるごはん屋さん</b>を見つけよう。<br>ジャンル・予算・雰囲気・用途・内装でしぼり込んで、地図でチェック。</p>
+  <p class="lead">いまいる場所・気になる駅から、<b>あるいて行けるごはん屋さん</b>を見つけよう。<br>ジャンル・予算・雰囲気・用途・個室でしぼり込んで、地図でチェック。</p>
 </header>
 
-<!-- 検索パネル -->
 <section class="panel">
   <div class="search-row">
     <input type="text" id="addr" placeholder="例: 渋谷駅 / 東京都新宿区西新宿2-8-1" autocomplete="off">
@@ -335,6 +329,7 @@ footer a { color: var(--accent-primary); }
     <div class="walk-slider-row">
       <input type="range" class="walk-slider" id="walkSlider" min="5" max="60" step="1" value="20">
     </div>
+    <div class="walk-note">※データ提供元(ホットペッパー)の検索範囲は最大3,000m(徒歩約37分)までです。それを超える分数を指定した場合は3,000m圏内の結果を表示します。</div>
   </div>
 
   <div class="filter-group">
@@ -347,51 +342,45 @@ footer a { color: var(--accent-primary); }
     <div class="chips" id="genreChips"></div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
       <details class="genre-group">
-        <summary>🌍 洋食を国で選ぶ <span class="badge-count" id="westernCount" style="display:none;"></span><span class="arrow">▼</span></summary>
+        <summary>🍝 イタリアン・フレンチを国で選ぶ <span class="badge-count" id="westernCount" style="display:none;"></span><span class="arrow">▼</span></summary>
         <div class="chips" id="westernChips"></div>
       </details>
       <details class="genre-group">
         <summary>🌏 アジア・エスニックを国で選ぶ <span class="badge-count" id="asianCount" style="display:none;"></span><span class="arrow">▼</span></summary>
         <div class="chips" id="asianChips"></div>
       </details>
+      <details class="genre-group">
+        <summary>🌍 各国料理を国で選ぶ <span class="badge-count" id="otherCount" style="display:none;"></span><span class="arrow">▼</span></summary>
+        <div class="chips" id="otherWesternChips"></div>
+      </details>
     </div>
+    <span class="est-note" style="display:inline-block; margin-top:6px;">国別の分類は店舗名・紹介文からの推定です</span>
     <div class="chips" style="margin-top:8px;">
       <button class="chip warn" id="excludeFamilyChip">🚫 ファミレスを除外</button>
     </div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">💰 予算
-      <span class="chips" style="display:inline-flex; gap:6px;">
-        <button class="chip on" data-mode="dinner" id="modeDinner">🌙 ディナー価格</button>
-        <button class="chip" data-mode="lunch" id="modeLunch">☀️ ランチ価格</button>
-      </span>
-    </span>
+    <span class="filter-label">💰 予算（ホットペッパー掲載の実際の目安）</span>
     <div class="chips" id="budgetChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🎐 雰囲気</span>
+    <span class="filter-label">🎐 雰囲気 <span class="est-note">ジャンル等からの推定</span></span>
     <div class="chips" id="moodChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🎯 用途</span>
+    <span class="filter-label">🎯 用途 <span class="est-note">ジャンル等からの推定</span></span>
     <div class="chips" id="useChips"></div>
   </div>
 
   <div class="filter-group">
-    <span class="filter-label">🪑 内装</span>
-    <div class="chips" id="interiorChips"></div>
-  </div>
-
-  <div class="filter-group">
-    <span class="filter-label">🍖🍺 食べ放題・飲み放題</span>
-    <div class="chips" id="buffetChips"></div>
+    <span class="filter-label">🪑 設備・条件（実データ）</span>
+    <div class="chips" id="facilityChips"></div>
   </div>
 </section>
 
-<!-- 結果 -->
 <div class="main-grid">
   <div id="map"></div>
   <div>
@@ -415,9 +404,9 @@ footer a { color: var(--accent-primary); }
 </div>
 
 <footer>
-  データ提供: <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">© OpenStreetMap contributors</a>（Overpass API）<br>
-  ジャンル・予算・雰囲気・用途・内装は地図データからの自動分類のため、実際のお店の情報と異なる場合があります。<br>
-  口コミ評価・実店舗の写真・クーポン情報は本サイトの無料データ源には無いため掲載していません。正確な情報は各店舗の公式サイトやGoogleマップでご確認ください。<br>
+  データ提供: <a href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener">Powered by ホットペッパーグルメ Webサービス</a><br>
+  店舗の写真はホットペッパー掲載の代表写真1枚です。すべての写真はお店のホットペッパーページでご覧いただけます。<br>
+  ジャンルの国別分類・雰囲気・用途は店舗名や紹介文からの自動推定のため、実際と異なる場合があります。予算・営業時間・個室・食べ放題／飲み放題・クーポン等はホットペッパー掲載の実データです。<br>
   徒歩時間は 80m/分（不動産表記基準）の直線距離換算です。
 </footer>
 </div>
@@ -425,6 +414,8 @@ footer a { color: var(--accent-primary); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 'use strict';
+
+const WORKER_BASE = 'https://aruite-gourmet-hotpepper-proxy.takechan5700.workers.dev';
 
 /* ===== 装飾: 食べ物ドリフター ===== */
 (function () {
@@ -441,238 +432,200 @@ footer a { color: var(--accent-primary); }
   }
 })();
 
-/* ===== ジャンル定義 ===== */
+/* ===== ジャンル定義（ベースはホットペッパーの正式マスタ） ===== */
 const GENRES = [
-  { key: 'washoku',  label: '和食・定食',   emoji: '🍱' },
-  { key: 'sushi',    label: '寿司・海鮮',   emoji: '🍣' },
-  { key: 'ramen',    label: 'ラーメン・麺', emoji: '🍜' },
+  { key: 'G001', label: '居酒屋',        emoji: '🍺' },
+  { key: 'G002', label: 'ダイニングバー・バル', emoji: '🍸' },
+  { key: 'G003', label: '創作料理',      emoji: '🍲' },
+  { key: 'G004', label: '和食',          emoji: '🍱' },
+  { key: 'G005', label: '洋食',          emoji: '🍽️' },
   { key: 'yakiniku', label: '焼肉・ホルモン', emoji: '🍖' },
-  { key: 'yakitori', label: '焼き鳥',       emoji: '🍢' },
-  { key: 'izakaya',  label: '居酒屋・バー', emoji: '🍺' },
-  { key: 'chinese',  label: '中華',         emoji: '🥟' },
-  { key: 'cafe',     label: 'カフェ・スイーツ', emoji: '☕' },
-  { key: 'fast',     label: 'ファストフード', emoji: '🍔' },
-  { key: 'other',    label: 'その他',       emoji: '🍽️' },
+  { key: 'yakitori', label: '焼き鳥',    emoji: '🍢' },
+  { key: 'G007', label: '中華',          emoji: '🥟' },
+  { key: 'G017', label: '韓国料理',      emoji: '🇰🇷' },
+  { key: 'G013', label: 'ラーメン',      emoji: '🍜' },
+  { key: 'G016', label: 'お好み焼き・もんじゃ', emoji: '🥞' },
+  { key: 'G014', label: 'カフェ・スイーツ', emoji: '☕' },
+  { key: 'G012', label: 'バー・カクテル', emoji: '🍹' },
+  { key: 'G011', label: 'カラオケ・パーティ', emoji: '🎤' },
+  { key: 'G015', label: 'その他グルメ',  emoji: '🍽️' },
 ];
+// G006(イタリアン・フレンチ)を国別に細分化
 const WESTERN_GENRES = [
-  { key: 'italian',  label: 'イタリア（ピザ含む）', emoji: '🍝' },
-  { key: 'france',   label: 'フランス', emoji: '🥐' },
-  { key: 'germany',  label: 'ドイツ',   emoji: '🥨' },
-  { key: 'spain',    label: 'スペイン', emoji: '🥘' },
-  { key: 'portugal', label: 'ポルトガル', emoji: '🐟' },
-  { key: 'uk',       label: 'イギリス', emoji: '🍽️' },
-  { key: 'finland',  label: 'フィンランド', emoji: '🫐' },
-  { key: 'australia',label: 'オーストラリア', emoji: '🦘' },
-  { key: 'usa',      label: 'アメリカ', emoji: '🇺🇸' },
-  { key: 'turkey',   label: 'トルコ',   emoji: '🥙' },
-  { key: 'western_other', label: 'その他洋食', emoji: '🍴' },
+  { key: 'italian', label: 'イタリア（ピザ含む）', emoji: '🍝' },
+  { key: 'france',  label: 'フランス', emoji: '🥐' },
 ];
+// G009(アジア・エスニック料理)を国別に細分化
 const ASIAN_GENRES = [
-  { key: 'thai',       label: 'タイ',           emoji: '🇹🇭' },
-  { key: 'vietnam',    label: 'ベトナム',       emoji: '🇻🇳' },
-  { key: 'malay_indo', label: 'マレー・インドネシア', emoji: '🇲🇾' },
-  { key: 'singapore',  label: 'シンガポール',   emoji: '🇸🇬' },
-  { key: 'asian_other',label: 'その他アジア・エスニック', emoji: '🍛' },
+  { key: 'thai',        label: 'タイ',             emoji: '🇹🇭' },
+  { key: 'vietnam',     label: 'ベトナム',         emoji: '🇻🇳' },
+  { key: 'malay_indo',  label: 'マレー・インドネシア', emoji: '🇲🇾' },
+  { key: 'singapore',   label: 'シンガポール',     emoji: '🇸🇬' },
+  { key: 'india',       label: 'インド・ネパール', emoji: '🇮🇳' },
+  { key: 'asian_other', label: 'その他アジア・エスニック', emoji: '🍛' },
 ];
-const ALL_GENRES = [...GENRES, ...WESTERN_GENRES, ...ASIAN_GENRES];
+// G010(各国料理)を国別に細分化
+const OTHER_WESTERN_GENRES = [
+  { key: 'germany',   label: 'ドイツ',       emoji: '🥨' },
+  { key: 'spain',     label: 'スペイン',     emoji: '🥘' },
+  { key: 'portugal',  label: 'ポルトガル',   emoji: '🐟' },
+  { key: 'uk',        label: 'イギリス',     emoji: '🍽️' },
+  { key: 'usa',       label: 'アメリカ',     emoji: '🇺🇸' },
+  { key: 'turkey',    label: 'トルコ',       emoji: '🥙' },
+  { key: 'mexico',    label: 'メキシコ',     emoji: '🇲🇽' },
+  { key: 'finland',   label: 'フィンランド', emoji: '🫐' },
+  { key: 'australia', label: 'オーストラリア', emoji: '🦘' },
+  { key: 'western_other', label: 'その他各国料理', emoji: '🌍' },
+];
+const ALL_GENRES = [...GENRES, ...WESTERN_GENRES, ...ASIAN_GENRES, ...OTHER_WESTERN_GENRES];
 const GENRE_MAP = Object.fromEntries(ALL_GENRES.map(g => [g.key, g]));
+function genreOf(key) { return GENRE_MAP[key] || { key, label: key, emoji: '🍽️' }; }
 
-const CUISINE_TO_GENRE = {
-  japanese:'washoku', teishoku:'washoku', tempura:'washoku', tonkatsu:'washoku', unagi:'washoku',
-  kaiseki:'washoku', okonomiyaki:'washoku', takoyaki:'washoku', donburi:'washoku', oden:'washoku', curry_rice:'washoku',
-  sushi:'sushi', seafood:'sushi', fish:'sushi', sashimi:'sushi',
-  ramen:'ramen', noodle:'ramen', udon:'ramen', soba:'ramen',
-  yakiniku:'yakiniku', barbecue:'yakiniku', horumon:'yakiniku', steak:'yakiniku', steak_house:'yakiniku',
-  yakitori:'yakitori',
-  izakaya:'izakaya',
-  chinese:'chinese', taiwanese:'chinese', dim_sum:'chinese', gyoza:'chinese',
-  coffee_shop:'cafe', cake:'cafe', dessert:'cafe', ice_cream:'cafe', crepe:'cafe',
-  pancake:'cafe', tea:'cafe', bubble_tea:'cafe', sandwich:'cafe', bakery:'cafe', donut:'cafe', waffle:'cafe',
-  burger:'fast', chicken:'fast', fried_chicken:'fast', fried_food:'fast', hot_dog:'fast',
-  italian:'italian', pizza:'italian', pasta:'italian',
-  french:'france',
-  german:'germany',
-  spanish:'spain',
-  portuguese:'portugal',
-  british:'uk',
-  finnish:'finland',
-  australian:'australia',
-  american:'usa', diner:'usa',
-  turkish:'turkey', kebab:'turkey',
-  thai:'thai',
-  vietnamese:'vietnam',
-  malaysian:'malay_indo', indonesian:'malay_indo',
-  singaporean:'singapore',
-  indian:'asian_other', curry:'asian_other', korean:'asian_other', nepalese:'asian_other', mexican:'asian_other',
-  international:'asian_other', western:'western_other', regional:'other',
-};
 const GENRE_COLOR = {
-  washoku:'#e08a3c', sushi:'#4a90d9', ramen:'#e0563c', yakiniku:'#b05237', yakitori:'#c96a2e',
-  izakaya:'#c9a227', chinese:'#d94a6b', cafe:'#8f6f52', fast:'#e05c8a', other:'#8a84a3',
-  italian:'#4caf6e', france:'#b28dff', germany:'#7a6a4f', spain:'#e0a83c', portugal:'#3c8fe0',
-  uk:'#5c6bc0', finland:'#4fb3bf', australia:'#c98a3c', usa:'#4a90d9', turkey:'#c94a4a',
-  western_other:'#8a84a3',
-  thai:'#5cbf6a', vietnam:'#e0563c', malay_indo:'#3cb0a0', singapore:'#e0a83c', asian_other:'#e0813c',
+  G001:'#c9a227', G002:'#9b6bd6', G003:'#5cbf6a', G004:'#e08a3c', G005:'#4a90d9',
+  yakiniku:'#b05237', yakitori:'#c96a2e', G007:'#d94a6b', G017:'#e0563c',
+  G013:'#e0563c', G016:'#c98a3c', G014:'#8f6f52', G012:'#5c6bc0', G011:'#e05c8a', G015:'#8a84a3',
+  italian:'#4caf6e', france:'#b28dff',
+  thai:'#5cbf6a', vietnam:'#e0563c', malay_indo:'#3cb0a0', singapore:'#e0a83c', india:'#e0813c', asian_other:'#e0813c',
+  germany:'#7a6a4f', spain:'#e0a83c', portugal:'#3c8fe0', uk:'#5c6bc0', usa:'#4a90d9',
+  turkey:'#c94a4a', mexico:'#e0563c', finland:'#4fb3bf', australia:'#c98a3c', western_other:'#8a84a3',
 };
 function genreColor(g) { return GENRE_COLOR[g] || '#8a84a3'; }
-function genreOf(key) { return GENRE_MAP[key] || GENRE_MAP.other; }
+
+/* 国別キーワード（店名・キャッチコピー・ジャンル名から推定） */
+const COUNTRY_KEYWORDS = [
+  ['france', ['フランス','仏','ビストロ','ブラッスリー']],
+  ['germany', ['ドイツ','独']],
+  ['spain', ['スペイン','バル','タパス']],
+  ['portugal', ['ポルトガル']],
+  ['uk', ['イギリス','英国','パブ']],
+  ['usa', ['アメリカ','米国','ダイナー']],
+  ['turkey', ['トルコ']],
+  ['mexico', ['メキシコ','タコス']],
+  ['finland', ['フィンランド','北欧']],
+  ['australia', ['オーストラリア','豪']],
+  ['thai', ['タイ料理','タイ','トムヤム']],
+  ['vietnam', ['ベトナム','フォー']],
+  ['malay_indo', ['マレーシア','マレー','インドネシア']],
+  ['singapore', ['シンガポール']],
+  ['india', ['インド','ネパール','カレー']],
+];
+function refineGenre(shop) {
+  const base = shop.baseGenreCode;
+  const text = [shop.name, shop.genreName, shop.catch].filter(Boolean).join(' ');
+  if (base === 'G008') {
+    return /焼き鳥|やきとり|串焼き|串カツ|串揚げ/.test(text) ? 'yakitori' : 'yakiniku';
+  }
+  if (base === 'G006') {
+    for (const kw of ['フランス','仏','ビストロ','ブラッスリー']) if (text.includes(kw)) return 'france';
+    return 'italian';
+  }
+  if (base === 'G009') {
+    for (const [key, words] of COUNTRY_KEYWORDS) {
+      if (['thai','vietnam','malay_indo','singapore','india'].includes(key) && words.some(w => text.includes(w))) return key;
+    }
+    return 'asian_other';
+  }
+  if (base === 'G010') {
+    for (const [key, words] of COUNTRY_KEYWORDS) {
+      if (['germany','spain','portugal','uk','usa','turkey','mexico','finland','australia'].includes(key) && words.some(w => text.includes(w))) return key;
+    }
+    return 'western_other';
+  }
+  return base;
+}
 
 /* ===== ファミレス・チェーン判定 ===== */
 const FAMILY_RESTAURANT_NAMES = [
   'デニーズ',"Denny's",'ガスト','サイゼリヤ','ジョナサン','ロイヤルホスト','バーミヤン',
   'ココス',"COCO'S",'フォルクス','ジョイフル','夢庵','和食さと','華屋与兵衛','とんでん','びっくりドンキー',
 ];
-const CHAIN_PIZZA_NAMES = ['ピザハット','Pizza Hut','ドミノ・ピザ','ドミノピザ',"Domino's",'ピザーラ'];
 function isFamilyRestaurant(shop) {
   const n = shop.name || '';
-  const b = (shop.tags && shop.tags.brand) || '';
-  return FAMILY_RESTAURANT_NAMES.some(k => n.includes(k) || b.includes(k));
-}
-function isChainPizza(shop) {
-  const n = shop.name || '';
-  const b = (shop.tags && shop.tags.brand) || '';
-  return CHAIN_PIZZA_NAMES.some(k => n.includes(k) || b.includes(k));
+  return FAMILY_RESTAURANT_NAMES.some(k => n.includes(k));
 }
 
-/* ===== 予算(ジャンル・時間帯から算出) ===== */
-const BASE_PRICE = {
-  washoku:{lunch:[800,1500],dinner:[2500,4000]}, sushi:{lunch:[1500,3000],dinner:[4000,8000]},
-  ramen:{lunch:[800,1200],dinner:[800,1300]}, yakiniku:{lunch:[1200,2000],dinner:[3500,6000]},
-  yakitori:{lunch:[1000,1500],dinner:[3000,5000]}, izakaya:{lunch:[900,1300],dinner:[3000,5000]},
-  chinese:{lunch:[800,1300],dinner:[2500,4000]}, cafe:{lunch:[900,1500],dinner:[900,1500]},
-  fast:{lunch:[500,900],dinner:[500,900]}, other:{lunch:[1000,1800],dinner:[2500,4500]},
-  italian:{lunch:[1200,2000],dinner:[3500,6000]}, france:{lunch:[2500,4000],dinner:[6000,12000]},
-  germany:{lunch:[1200,2000],dinner:[3000,5000]}, spain:{lunch:[1200,2000],dinner:[3000,5500]},
-  portugal:{lunch:[1200,2000],dinner:[3000,5000]}, uk:{lunch:[1200,2000],dinner:[3000,5000]},
-  finland:{lunch:[1500,2500],dinner:[3500,6000]}, australia:{lunch:[1200,2000],dinner:[3000,5500]},
-  usa:{lunch:[1000,1800],dinner:[2500,4500]}, turkey:{lunch:[1000,1600],dinner:[2500,4500]},
-  thai:{lunch:[1000,1600],dinner:[2500,4000]}, vietnam:{lunch:[1000,1500],dinner:[2500,4000]},
-  malay_indo:{lunch:[1000,1600],dinner:[2500,4000]}, singapore:{lunch:[1200,1800],dinner:[2800,4500]},
-  asian_other:{lunch:[900,1400],dinner:[2200,3800]},
+/* ===== 予算（ホットペッパー実データ） ===== */
+const BUDGET_MID = {
+  B009:250, B010:750, B011:1250, B001:1750, B002:2500, B003:3500, B008:4500,
+  B015:5500, B016:6500, B017:7500, B018:8500, B019:9500, B020:11000, B021:13500,
+  B012:17500, B013:25000, B014:35000,
 };
-function priceMid(shop, mode) {
-  if (shop.amenity === 'fast_food') return mode === 'lunch' ? 700 : 700;
-  if (isFamilyRestaurant(shop)) return mode === 'lunch' ? 950 : 1250;
-  const r = BASE_PRICE[shop.genre] || BASE_PRICE.other;
-  const [lo, hi] = r[mode] || r.dinner;
-  return (lo + hi) / 2;
-}
 const BUDGETS = [
-  { key: 'u800',   label: '〜¥800' },
-  { key: 'u1500',  label: '¥800〜1,500' },
-  { key: 'u3000',  label: '¥1,500〜3,000' },
-  { key: 'u5000',  label: '¥3,000〜5,000' },
-  { key: 'u10000', label: '¥5,000〜10,000' },
-  { key: 'o10000', label: '¥10,000〜' },
+  { key: 'B009', label: '〜¥500' }, { key: 'B010', label: '¥501〜1,000' },
+  { key: 'B011', label: '¥1,001〜1,500' }, { key: 'B001', label: '¥1,501〜2,000' },
+  { key: 'B002', label: '¥2,001〜3,000' }, { key: 'B003', label: '¥3,001〜4,000' },
+  { key: 'B008', label: '¥4,001〜5,000' }, { key: 'B015', label: '¥5,001〜6,000' },
+  { key: 'B016', label: '¥6,001〜8,000' }, { key: 'B018', label: '¥8,001〜10,000' },
+  { key: 'B020', label: '¥10,001〜15,000' }, { key: 'B012', label: '¥15,001〜20,000' },
+  { key: 'B013', label: '¥20,001〜' },
 ];
-function budgetBucket(shop, mode) {
-  const mid = priceMid(shop, mode);
-  if (mid < 800) return 'u800';
-  if (mid < 1500) return 'u1500';
-  if (mid < 3000) return 'u3000';
-  if (mid < 5000) return 'u5000';
-  if (mid < 10000) return 'u10000';
-  return 'o10000';
-}
+function budgetMid(shop) { return BUDGET_MID[shop.budgetCode] || 2000; }
 
-/* ===== 雰囲気 ===== */
+/* ===== 雰囲気（推定） ===== */
 const MOODS = [
-  { key: 'oshare',   label: 'おしゃれ ✨' },
-  { key: 'calm',     label: '落ち着いた 🍵' },
-  { key: 'lively',   label: 'にぎやか 🎉' },
-  { key: 'casual',   label: 'カジュアル 🎈' },
-  { key: 'luxury',   label: '高級・特別な日 💎' },
-  { key: 'hideaway', label: '隠れ家 🕯️' },
+  { key: 'oshare',   label: 'おしゃれ ✨' }, { key: 'calm', label: '落ち着いた 🍵' },
+  { key: 'lively',   label: 'にぎやか 🎉' }, { key: 'casual', label: 'カジュアル 🎈' },
+  { key: 'luxury',   label: '高級・特別な日 💎' }, { key: 'hideaway', label: '隠れ家 🕯️' },
 ];
 function estimateMoods(shop) {
   const m = new Set(); const g = shop.genre;
-  const familyish = isFamilyRestaurant(shop) || g === 'fast';
-  if (!familyish && ['cafe','italian','france','singapore'].includes(g)) m.add('oshare');
-  if (['washoku','sushi','france','germany'].includes(g)) m.add('calm');
-  if (['izakaya','yakitori','yakiniku'].includes(g)) m.add('lively');
-  if (familyish || ['ramen','fast','chinese'].includes(g)) m.add('casual');
-  if (shop.amenity === 'bar' || shop.amenity === 'pub') m.add('lively');
-  const dinnerMid = priceMid(shop, 'dinner');
-  if (dinnerMid >= 8000 && !familyish) m.add('luxury');
-  if (['france','sushi'].includes(g) && dinnerMid >= 5000) m.add('hideaway');
+  const familyish = isFamilyRestaurant(shop);
+  if (!familyish && ['G014','italian','france','singapore'].includes(g)) m.add('oshare');
+  if (['G004','G017','france','germany'].includes(g)) m.add('calm');
+  if (['G001','G002','yakitori','yakiniku'].includes(g)) m.add('lively');
+  if (familyish || ['G013','G007','G016'].includes(g)) m.add('casual');
+  const mid = budgetMid(shop);
+  if (mid >= 8000 && !familyish) m.add('luxury');
+  if (['france','G003'].includes(g) && mid >= 5000) m.add('hideaway');
+  if (shop.privateRoom && mid >= 4000) m.add('hideaway');
   if (m.size === 0) m.add('casual');
   return [...m];
 }
 
-/* ===== 用途 ===== */
+/* ===== 用途（推定） ===== */
 const USES = [
-  { key: 'date',       label: 'デート 💐' },
-  { key: 'family',     label: '家族・子連れ 👨‍👩‍👧' },
-  { key: 'solo',       label: 'おひとり様 🎧' },
-  { key: 'party',      label: '宴会・飲み会 🍻' },
-  { key: 'meeting',    label: '打ち合わせ 💼' },
-  { key: 'anniversary',label: '記念日 🎂' },
-  { key: 'girls',      label: '女子会 💅' },
-  { key: 'business',   label: '接待 🎩' },
+  { key: 'date', label: 'デート 💐' }, { key: 'family', label: '家族・子連れ 👨‍👩‍👧' },
+  { key: 'solo', label: 'おひとり様 🎧' }, { key: 'party', label: '宴会・飲み会 🍻' },
+  { key: 'meeting', label: '打ち合わせ 💼' }, { key: 'anniversary', label: '記念日 🎂' },
+  { key: 'girls', label: '女子会 💅' }, { key: 'business', label: '接待 🎩' },
   { key: 'solo_drink', label: 'ひとり飲み 🍶' },
 ];
 function estimateUses(shop) {
   const u = new Set(); const g = shop.genre;
   const familyish = isFamilyRestaurant(shop);
-  const excludeDate = familyish || isChainPizza(shop) || g === 'fast';
-  if (!excludeDate && ['france','italian','cafe','sushi','singapore'].includes(g)) u.add('date');
-  if (familyish || ['washoku','chinese','italian','fast'].includes(g)) u.add('family');
-  if (['ramen','cafe','fast','washoku'].includes(g)) u.add('solo');
-  if (['izakaya','yakiniku','yakitori','chinese'].includes(g) || shop.amenity === 'pub' || shop.amenity === 'bar') u.add('party');
-  if (['cafe','france'].includes(g) && !familyish) u.add('meeting');
-  const dinnerMid = priceMid(shop, 'dinner');
-  if (!excludeDate && dinnerMid >= 6000) u.add('anniversary');
-  if (['izakaya','cafe'].includes(g) && !familyish) u.add('girls');
-  if (['france','sushi','washoku'].includes(g) && dinnerMid >= 4000) u.add('business');
-  if (['izakaya','yakitori'].includes(g)) u.add('solo_drink');
+  const excludeDate = familyish;
+  if (!excludeDate && ['france','italian','G014','singapore'].includes(g)) u.add('date');
+  if (familyish || shop.child || ['G004','G007','italian'].includes(g)) u.add('family');
+  if (['G013','G014'].includes(g)) u.add('solo');
+  if (['G001','yakiniku','yakitori','G007'].includes(g) || shop.freeDrink) u.add('party');
+  if (['G014','france'].includes(g) && !familyish) u.add('meeting');
+  const mid = budgetMid(shop);
+  if (!excludeDate && mid >= 6000) u.add('anniversary');
+  if (['G001','G014'].includes(g) && !familyish) u.add('girls');
+  if (['france','G003','G004'].includes(g) && mid >= 4000) u.add('business');
+  if (['G001','yakitori','G002'].includes(g)) u.add('solo_drink');
   if (u.size === 0) u.add('solo');
   return [...u];
 }
 
-/* ===== 内装 ===== */
-const INTERIORS = [
-  { key: 'room',    label: '個室 🚪' },
-  { key: 'terrace', label: 'オープンテラス ☀️' },
-  { key: 'counter', label: 'カウンター席 🪑' },
+/* ===== 設備・条件（ホットペッパー実データ） ===== */
+const FACILITIES = [
+  { key: 'privateRoom', label: '個室 🚪' },
+  { key: 'freeFood',    label: '食べ放題あり 🍖' },
+  { key: 'freeDrink',   label: '飲み放題あり 🍺' },
+  { key: 'nonSmoking',  label: '禁煙席あり 🚭' },
+  { key: 'card',        label: 'カード利用可 💳' },
+  { key: 'lunch',       label: 'ランチ営業あり ☀️' },
+  { key: 'tatami',      label: '座敷・小上がり 🍵' },
+  { key: 'wifi',        label: 'Wi-Fiあり 📶' },
 ];
-function estimateInterior(shop) {
-  const t = shop.tags || {};
-  const room = t['room:private'] === 'yes' || t['private_room'] === 'yes' ||
-    (['izakaya','yakiniku','washoku','sushi','chinese','yakitori','france'].includes(shop.genre)
-      && shop.amenity !== 'fast_food' && !isFamilyRestaurant(shop));
-  const terrace = t.outdoor_seating === 'yes';
-  const counter = ['ramen','sushi','yakitori','izakaya'].includes(shop.genre) || t.counter === 'yes';
-  return { room, terrace, counter };
-}
-
-/* ===== 食べ放題・飲み放題 ===== */
-const BUFFETS = [
-  { key: 'eat',  label: '食べ放題あり 🍖' },
-  { key: 'drink',label: '飲み放題あり 🍺' },
-];
-function estimateBuffet(shop) {
-  const t = shop.tags || {}; const n = shop.name || '';
-  return {
-    eat: t.all_you_can_eat === 'yes' || /食べ放題|ビュッフェ|バイキング/.test(n),
-    drink: t.all_you_can_drink === 'yes' || /飲み放題/.test(n),
-  };
-}
 
 /* ===== 状態 ===== */
 const state = {
-  origin: null,
-  shops: [],
-  fGenre: new Set(),
-  fMood: new Set(),
-  fUse: new Set(),
-  fInterior: new Set(),
-  fBuffet: new Set(),
-  fBudget: new Set(),
-  excludeFamily: false,
-  budgetMode: 'dinner',
-  keyword: '',
-  sortKey: 'dist',
-  pickMode: false,
+  origin: null, shops: [],
+  fGenre: new Set(), fMood: new Set(), fUse: new Set(), fFacility: new Set(), fBudget: new Set(),
+  excludeFamily: false, keyword: '', sortKey: 'dist', pickMode: false,
 };
 
 /* ===== 地図 ===== */
@@ -711,18 +664,20 @@ function buildChips(elId, items, set, onChange) {
 buildChips('genreChips', GENRES, state.fGenre);
 buildChips('westernChips', WESTERN_GENRES, state.fGenre, updateGroupBadges);
 buildChips('asianChips', ASIAN_GENRES, state.fGenre, updateGroupBadges);
+buildChips('otherWesternChips', OTHER_WESTERN_GENRES, state.fGenre, updateGroupBadges);
 buildChips('budgetChips', BUDGETS, state.fBudget);
 buildChips('moodChips', MOODS, state.fMood);
 buildChips('useChips', USES, state.fUse);
-buildChips('interiorChips', INTERIORS, state.fInterior);
-buildChips('buffetChips', BUFFETS, state.fBuffet);
+buildChips('facilityChips', FACILITIES, state.fFacility);
 
 function updateGroupBadges() {
   const wCount = WESTERN_GENRES.filter(g => state.fGenre.has(g.key)).length;
   const aCount = ASIAN_GENRES.filter(g => state.fGenre.has(g.key)).length;
-  const wEl = document.getElementById('westernCount'), aEl = document.getElementById('asianCount');
+  const oCount = OTHER_WESTERN_GENRES.filter(g => state.fGenre.has(g.key)).length;
+  const wEl = document.getElementById('westernCount'), aEl = document.getElementById('asianCount'), oEl = document.getElementById('otherCount');
   wEl.style.display = wCount ? '' : 'none'; wEl.textContent = wCount;
   aEl.style.display = aCount ? '' : 'none'; aEl.textContent = aCount;
+  oEl.style.display = oCount ? '' : 'none'; oEl.textContent = oCount;
 }
 
 document.getElementById('excludeFamilyChip').addEventListener('click', function () {
@@ -731,28 +686,22 @@ document.getElementById('excludeFamilyChip').addEventListener('click', function 
   render();
 });
 
-document.getElementById('modeDinner').addEventListener('click', () => setBudgetMode('dinner'));
-document.getElementById('modeLunch').addEventListener('click', () => setBudgetMode('lunch'));
-function setBudgetMode(mode) {
-  state.budgetMode = mode;
-  document.getElementById('modeDinner').classList.toggle('on', mode === 'dinner');
-  document.getElementById('modeLunch').classList.toggle('on', mode === 'lunch');
-  render();
-}
-
 const keywordInput = document.getElementById('keyword');
-keywordInput.addEventListener('input', () => { state.keyword = keywordInput.value.trim().toLowerCase(); render(); });
+let keywordTimer = null;
+keywordInput.addEventListener('input', () => {
+  clearTimeout(keywordTimer);
+  keywordTimer = setTimeout(() => {
+    state.keyword = keywordInput.value.trim().toLowerCase();
+    if (state.origin) fetchShops(); else render();
+  }, 500);
+});
 
 document.getElementById('sortSelect').addEventListener('change', e => { state.sortKey = e.target.value; render(); });
 
 const walkSlider = document.getElementById('walkSlider');
 const walkVal = document.getElementById('walkVal');
-walkSlider.addEventListener('input', () => {
-  walkVal.textContent = walkSlider.value;
-});
-walkSlider.addEventListener('change', () => {
-  if (state.origin) fetchShops();
-});
+walkSlider.addEventListener('input', () => { walkVal.textContent = walkSlider.value; });
+walkSlider.addEventListener('change', () => { if (state.origin) fetchShops(); });
 
 /* ===== 検索アクション ===== */
 document.getElementById('searchBtn').addEventListener('click', doSearch);
@@ -791,19 +740,14 @@ async function doSearch() {
   }
 }
 
-/* ===== ジオコーディング =====
-   住所らしい入力（○○区△△1-2-3 など）→ 国土地理院API優先。
-   駅名・スポット名 → Nominatim優先（GSIは駅名で誤ヒットするため）。 */
+/* ===== ジオコーディング ===== */
 async function geocode(q) {
   const kan = { '一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10' };
   const norm = q.replace(/([一二三四五六七八九十])丁目/g, (_, k) => kan[k] + '丁目');
   const looksAddress = /[都道府県市区町村]/.test(norm) && /[0-9０-９]/.test(norm) && !/駅/.test(norm);
   const order = looksAddress ? [geocodeGsi, geocodeNominatim] : [geocodeNominatim, geocodeGsi];
   for (const fn of order) {
-    try {
-      const loc = await fn(norm);
-      if (loc) return loc;
-    } catch (e) { /* 次へ */ }
+    try { const loc = await fn(norm); if (loc) return loc; } catch (e) { /* 次へ */ }
   }
   return null;
 }
@@ -844,66 +788,67 @@ function setOrigin(lat, lon, label) {
 function walkRadius() {
   let v = parseInt(walkSlider.value, 10);
   if (isNaN(v)) v = 20;
-  return Math.min(60, Math.max(5, v)) * 80; // 80m/分
+  return Math.min(60, Math.max(5, v)) * 80;
+}
+// ホットペッパーAPIのrangeパラメータ(1=300m,2=500m,3=1000m,4=2000m,5=3000m)に丸める
+function toApiRange(meters) {
+  if (meters <= 300) return 1;
+  if (meters <= 500) return 2;
+  if (meters <= 1000) return 3;
+  if (meters <= 2000) return 4;
+  return 5;
 }
 
-/* ===== Overpass取得 ===== */
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+/* ===== ホットペッパーAPI取得 ===== */
 async function fetchShops() {
   if (!state.origin) return;
   const r = walkRadius();
-  if (walkCircle) { walkCircle.setRadius(r); map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] }); }
-  showStatus('spinner', 'ちかくのお店をあつめています…（範囲が広いと時間がかかることがあります）');
-  const q = `[out:json][timeout:40];
-nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|food_court|ice_cream)$"]["name"](around:${r},${state.origin.lat},${state.origin.lon});
-out center tags;`;
+  if (walkCircle) { walkCircle.setRadius(Math.min(r, 3000)); map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] }); }
+  showStatus('spinner', 'ちかくのお店をあつめています…');
+  const params = new URLSearchParams({
+    lat: state.origin.lat, lng: state.origin.lon,
+    range: String(toApiRange(r)), count: '100', order: '4',
+  });
+  if (state.keyword) params.set('keyword', state.keyword);
   let data = null;
-  for (const ep of OVERPASS) {
-    try {
-      const res = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-      if (!res.ok) continue;
-      data = await res.json();
-      break;
-    } catch (e) { /* 次のミラーへ */ }
-  }
-  if (!data) { showStatus('⚠️', 'お店データの取得に失敗しました。時間をおいて再度お試しください。'); return; }
-  state.shops = data.elements.map(el => {
-    const lat = el.lat !== undefined ? el.lat : (el.center && el.center.lat);
-    const lon = el.lon !== undefined ? el.lon : (el.center && el.center.lon);
-    if (lat === undefined || lon === undefined) return null;
-    const tags = el.tags || {};
-    // 閉業扱いのタグが付いているものは除外（安全側フィルタ）
-    if (tags.opening_hours === 'closed' || tags.disused === 'yes') return null;
-    const cuisine = (tags.cuisine || '').toLowerCase();
-    const firstCuisine = cuisine.split(';')[0].trim();
-    let genre = CUISINE_TO_GENRE[firstCuisine] || null;
-    if (!genre) {
-      if (tags.amenity === 'cafe' || tags.amenity === 'ice_cream') genre = 'cafe';
-      else if (tags.amenity === 'fast_food') genre = 'fast';
-      else if (tags.amenity === 'bar' || tags.amenity === 'pub') genre = 'izakaya';
-      else genre = 'other';
-    }
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/search?${params.toString()}`);
+    if (res.ok) data = await res.json();
+  } catch (e) { /* エラー処理は下で */ }
+  if (!data || !data.results) { showStatus('⚠️', 'お店データの取得に失敗しました。時間をおいて再度お試しください。'); return; }
+  const shopList = data.results.shop || [];
+  state.shops = shopList.map(sh => {
+    const lat = parseFloat(sh.lat), lon = parseFloat(sh.lng);
     const distM = distKm(state.origin.lat, state.origin.lon, lat, lon) * 1000;
     const shop = {
-      id: el.type + '/' + el.id,
-      name: tags.name,
-      lat, lon, tags,
-      amenity: tags.amenity,
-      cuisine: firstCuisine,
-      genre,
-      distM: Math.round(distM),
-      walkMin: Math.max(1, Math.ceil(distM / 80)),
-      opening: tags.opening_hours || '',
-      phone: tags.phone || tags['contact:phone'] || '',
-      web: tags.website || tags['contact:website'] || '',
+      id: sh.id, name: sh.name, lat, lon,
+      baseGenreCode: sh.genre ? sh.genre.code : 'G015',
+      genreName: sh.genre ? sh.genre.name : '',
+      catch: sh.catch || (sh.genre && sh.genre.catch) || '',
+      budgetCode: sh.budget ? sh.budget.code : '',
+      budgetLabel: sh.budget ? sh.budget.name : '不明',
+      distM: Math.round(distM), walkMin: Math.max(1, Math.ceil(distM / 80)),
+      address: sh.address || '', open: sh.open || '', close: sh.close || '',
+      photo: sh.photo && sh.photo.pc ? sh.photo.pc.m : '',
+      shopUrl: sh.urls ? sh.urls.pc : '',
+      couponUrl: sh.coupon_urls ? (sh.coupon_urls.sp || sh.coupon_urls.pc) : '',
+      privateRoom: sh.private_room === 'あり',
+      freeFood: sh.free_food === 'あり',
+      freeDrink: sh.free_drink === 'あり',
+      nonSmoking: sh.non_smoking && sh.non_smoking !== 'なし',
+      card: sh.card === '利用可',
+      lunch: sh.lunch === 'あり',
+      tatami: sh.tatami === 'あり',
+      wifi: sh.wifi === 'あり',
+      child: sh.child && sh.child.includes('OK'),
     };
+    shop.genre = refineGenre(shop);
     shop.moods = estimateMoods(shop);
     shop.uses = estimateUses(shop);
-    shop.interior = estimateInterior(shop);
-    shop.buffet = estimateBuffet(shop);
     shop.family = isFamilyRestaurant(shop);
     return shop;
-  }).filter(s => s && s.distM <= r).sort((a, b) => a.distM - b.distM);
+  }).filter(s => s.lat && s.lon && s.distM <= r).sort((a, b) => a.distM - b.distM);
+  state.resultsAvailable = data.results.results_available || state.shops.length;
   render();
 }
 
@@ -917,22 +862,20 @@ function distKm(a, b, c, d) {
 function filtered() {
   const kw = state.keyword;
   return state.shops.filter(s => {
-    const budget = budgetBucket(s, state.budgetMode);
     return (state.fGenre.size === 0 || state.fGenre.has(s.genre)) &&
-      (state.fBudget.size === 0 || state.fBudget.has(budget)) &&
+      (state.fBudget.size === 0 || state.fBudget.has(s.budgetCode)) &&
       (state.fMood.size === 0 || s.moods.some(m => state.fMood.has(m))) &&
       (state.fUse.size === 0 || s.uses.some(u => state.fUse.has(u))) &&
-      (state.fInterior.size === 0 || [...state.fInterior].some(k => s.interior[k])) &&
-      (state.fBuffet.size === 0 || [...state.fBuffet].some(k => s.buffet[k])) &&
+      (state.fFacility.size === 0 || [...state.fFacility].every(k => s[k])) &&
       (!state.excludeFamily || !s.family) &&
-      (!kw || s.name.toLowerCase().includes(kw) || (s.cuisine && s.cuisine.includes(kw)) || genreOf(s.genre).label.toLowerCase().includes(kw));
+      (!kw || s.name.toLowerCase().includes(kw) || genreOf(s.genre).label.toLowerCase().includes(kw));
   });
 }
 function sortList(list) {
   const arr = list.slice();
   if (state.sortKey === 'dist') arr.sort((a, b) => a.distM - b.distM);
-  else if (state.sortKey === 'budgetAsc') arr.sort((a, b) => priceMid(a, state.budgetMode) - priceMid(b, state.budgetMode));
-  else if (state.sortKey === 'budgetDesc') arr.sort((a, b) => priceMid(b, state.budgetMode) - priceMid(a, state.budgetMode));
+  else if (state.sortKey === 'budgetAsc') arr.sort((a, b) => budgetMid(a) - budgetMid(b));
+  else if (state.sortKey === 'budgetDesc') arr.sort((a, b) => budgetMid(b) - budgetMid(a));
   else if (state.sortKey === 'name') arr.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
   return arr;
 }
@@ -941,8 +884,9 @@ function render() {
   if (!state.origin) return;
   const list = sortList(filtered());
   const cards = document.getElementById('cards');
+  const capNote = state.resultsAvailable > state.shops.length ? `（全${state.resultsAvailable}件中、直近100件を表示）` : '';
   document.getElementById('count').textContent =
-    `${list.length}件 / 全${state.shops.length}件（${state.origin.label}から徒歩${walkSlider.value}分圏）`;
+    `${list.length}件表示 / 取得${state.shops.length}件${capNote}（${state.origin.label}から徒歩${walkSlider.value}分圏、API上限3,000m）`;
 
   markerLayer.clearLayers();
   Object.keys(markerById).forEach(k => delete markerById[k]);
@@ -955,7 +899,6 @@ function render() {
 
   const moodMap = Object.fromEntries(MOODS.map(m => [m.key, m.label]));
   const useMap = Object.fromEntries(USES.map(u => [u.key, u.label]));
-  const budgetMap = Object.fromEntries(BUDGETS.map(b => [b.key, b.label]));
 
   list.forEach((s, i) => {
     const g = genreOf(s.genre);
@@ -965,7 +908,7 @@ function render() {
     }).bindPopup(
       `<span class="popup-name">${g.emoji} ${escapeHtml(s.name)}</span><br>` +
       `<span class="popup-sub">${g.label} ・ 徒歩約${s.walkMin}分（${s.distM}m）</span>` +
-      (s.web ? `<br><a href="${escapeHtml(s.web)}" target="_blank" rel="noopener">公式サイト</a>` : '')
+      (s.shopUrl ? `<br><a href="${escapeHtml(s.shopUrl)}" target="_blank" rel="noopener">ホットペッパーで見る</a>` : '')
     );
     mk.on('click', () => highlightCard(s.id));
     mk.addTo(markerLayer);
@@ -976,34 +919,34 @@ function render() {
     card.dataset.id = s.id;
     card.style.animationDelay = Math.min(i * 0.06, 0.8) + 's';
     const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + ' ' + s.lat + ',' + s.lon)}`;
-    const photoUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(s.name)}`;
-    const budget = budgetBucket(s, state.budgetMode);
-    const hoursText = s.opening ? escapeHtml(s.opening) : '営業時間情報なし（公式サイト等でご確認ください）';
+    const hoursText = s.open ? escapeHtml(s.open) : '営業時間情報なし';
+    const closeText = s.close ? `<br>🚫 定休日: ${escapeHtml(s.close)}` : '';
+    const photoHtml = s.photo
+      ? `<img class="shop-photo" src="${escapeHtml(s.photo)}" alt="${escapeHtml(s.name)}の写真" loading="lazy">`
+      : `<div class="shop-emoji">${g.emoji}</div>`;
     card.innerHTML =
       `<span class="walk-badge">🚶 約${s.walkMin}分</span>
       <div class="shop-top">
-        <div class="shop-emoji">${g.emoji}</div>
+        ${photoHtml}
         <div>
           <div class="shop-name">${escapeHtml(s.name)}</div>
-          <div class="shop-meta">${g.label} ・ ${s.distM}m<br>🕐 ${hoursText}</div>
+          <div class="shop-meta">${g.label} ・ ${s.distM}m<br>🕐 ${hoursText}${closeText}</div>
         </div>
       </div>
       <div class="tags">
         <span class="tag genre">${g.label}</span>
-        <span class="tag budget">💰 ${budgetMap[budget]}</span>
+        <span class="tag budget">💰 ${escapeHtml(s.budgetLabel)}</span>
         ${s.moods.map(m => `<span class="tag mood">${moodMap[m]}</span>`).join('')}
         ${s.uses.map(u => `<span class="tag">${useMap[u]}</span>`).join('')}
-        ${s.interior.room ? '<span class="tag room">🚪 個室</span>' : ''}
-        ${s.interior.terrace ? '<span class="tag room">☀️ テラス</span>' : ''}
-        ${s.interior.counter ? '<span class="tag room">🪑 カウンター</span>' : ''}
-        ${s.buffet.eat ? '<span class="tag buffet">🍖 食べ放題</span>' : ''}
-        ${s.buffet.drink ? '<span class="tag buffet">🍺 飲み放題</span>' : ''}
+        ${s.privateRoom ? '<span class="tag room">🚪 個室</span>' : ''}
+        ${s.tatami ? '<span class="tag room">🍵 座敷</span>' : ''}
+        ${s.freeFood ? '<span class="tag buffet">🍖 食べ放題</span>' : ''}
+        ${s.freeDrink ? '<span class="tag buffet">🍺 飲み放題</span>' : ''}
       </div>
       <div class="actions-row">
+        ${s.shopUrl ? `<a class="mini-btn" href="${escapeHtml(s.shopUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 予約・詳細（ホットペッパー）</a>` : ''}
+        ${s.couponUrl ? `<a class="mini-btn" href="${escapeHtml(s.couponUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎫 クーポンを見る</a>` : ''}
         <a class="mini-btn" href="${gmapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🗺️ Googleマップ</a>
-        <a class="mini-btn" href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📷 写真を見る</a>
-        ${s.web ? `<a class="mini-btn" href="${escapeHtml(s.web)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 予約・公式サイト</a>` : ''}
-        ${s.phone ? `<a class="mini-btn" href="tel:${escapeHtml(s.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">📞 ${escapeHtml(s.phone)}</a>` : ''}
       </div>`;
     card.addEventListener('click', () => {
       map.setView([s.lat, s.lon], Math.max(map.getZoom(), 17));
@@ -1020,9 +963,7 @@ function render() {
 function setMarkerHover(id, on) {
   const mk = markerById[id];
   if (!mk) return;
-  mk.setStyle(on
-    ? { radius: 13, weight: 4, color: '#ff9ecb' }
-    : { radius: 8, weight: 2, color: '#fff' });
+  mk.setStyle(on ? { radius: 13, weight: 4, color: '#ff9ecb' } : { radius: 8, weight: 2, color: '#fff' });
   if (on) mk.bringToFront();
 }
 
