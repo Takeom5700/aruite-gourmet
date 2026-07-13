@@ -702,6 +702,28 @@ function buildGoogleSummary(p) {
     const text = lowRatingReview.text.text.trim().replace(/\s+/g, ' ');
     cautions.push(`低評価の口コミもあります(★${lowRatingReview.rating}): 「${text.slice(0, 60)}${text.length > 60 ? '…' : ''}」`);
   }
+  // 紹介文も口コミも無い場合は、営業形態・設備データから簡単な説明を組み立てる(最終手段)
+  if (!parts.length) {
+    const facts = [];
+    if (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) facts.push(p.primaryTypeDisplayName.text);
+    const style = [];
+    if (p.dineIn) style.push('イートイン');
+    if (p.takeout) style.push('テイクアウト');
+    if (p.delivery) style.push('デリバリー');
+    if (style.length) facts.push(style.join('・') + '対応');
+    const features = [];
+    if (p.outdoorSeating) features.push('屋外席あり');
+    if (p.goodForGroups) features.push('グループ向き');
+    if (p.goodForChildren) features.push('子連れ歓迎');
+    if (p.reservable) features.push('予約可');
+    if (p.liveMusic) features.push('ライブ演奏あり');
+    if (p.servesCocktails || p.servesWine || p.servesBeer) features.push('お酒あり');
+    if (features.length) facts.push(features.join('・'));
+    if (p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions && p.regularOpeningHours.weekdayDescriptions.length) {
+      facts.push('営業時間: ' + p.regularOpeningHours.weekdayDescriptions[0]);
+    }
+    if (facts.length) parts.push(facts.join('。') + '。');
+  }
   const summary = parts.join(' ');
   return {
     text: summary || 'Googleマップで見つかった店舗です。ホットペッパー・地図データ双方に未掲載のため詳細情報は少なめです。',
