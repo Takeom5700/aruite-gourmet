@@ -365,6 +365,11 @@ footer a { color: var(--accent-primary); }
     <div class="chips" id="facilityChips"></div>
   </div>
 
+  <div class="filter-group">
+    <span class="filter-label">⭐ Googleの評価で絞り込み <span class="est-note">評価はGoogle Places APIの実データ(取得できた店舗のみ)</span></span>
+    <div class="chips" id="ratingChips"></div>
+  </div>
+
   <div class="filter-group" style="text-align:center; margin-top:22px;">
     <button class="btn btn-primary" id="searchBtnBottom">🔍 さがす</button>
   </div>
@@ -377,6 +382,7 @@ footer a { color: var(--accent-primary); }
       <h2>🍴 みつかったお店</h2>
       <select class="select" id="sortSelect">
         <option value="dist">🚶 徒歩が近い順</option>
+        <option value="ratingDesc">⭐ 評価が高い順</option>
         <option value="budgetAsc">💰 予算が安い順</option>
         <option value="budgetDesc">💰 予算が高い順</option>
         <option value="name">🔤 名前順</option>
@@ -396,6 +402,7 @@ footer a { color: var(--accent-primary); }
   データ提供: <a href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener">Powered by ホットペッパーグルメ Webサービス</a><br>
   店舗の写真はホットペッパー掲載の代表写真1枚です（内装・料理などどの写真かはデータ上区別できません）。すべての写真はお店のホットペッパーページでご覧いただけます。<br>
   お店の要約文はホットペッパー掲載のキャッチコピー・お店からのメモ・設備データを組み合わせて自動生成しています。ジャンルの国別分類・雰囲気・用途は店舗名や紹介文からの自動推定のため、実際と異なる場合があります。予算・営業時間・個室・食べ放題／飲み放題・クーポン・貸切可否等はホットペッパー掲載の実データです。<br>
+  ホットペッパー・地図データ(OpenStreetMap)双方に無い店舗はGoogleマップの情報で補完し、星評価もGoogleの実データを表示しています（Google側の呼び出し回数には安全のため月間の上限を設けており、上限に達した場合は評価情報の取得を一時的に休止します）。<br>
   徒歩時間は 80m/分（不動産表記基準）の直線距離換算です。
 </footer>
 </div>
@@ -630,6 +637,11 @@ const FACILITIES = [
   { key: 'petOk', label: 'ペット可 🐾' }, { key: 'barrierFree', label: 'バリアフリー ♿' },
 ];
 
+/* ===== 評価フィルター(Google Places実データ) ===== */
+const RATINGS = [
+  { key: '3.5', label: '★3.5以上' }, { key: '4.0', label: '★4.0以上' }, { key: '4.5', label: '★4.5以上' },
+];
+
 /* ===== 要約文の自動生成（実データのみで構成） ===== */
 function buildSummary(shop) {
   const parts = [];
@@ -657,7 +669,7 @@ function buildSummary(shop) {
 /* ===== 状態 ===== */
 const state = {
   origin: null, shops: [],
-  fGenre: new Set(), fMood: new Set(), fUse: new Set(), fFacility: new Set(), fBudget: new Set(),
+  fGenre: new Set(), fMood: new Set(), fUse: new Set(), fFacility: new Set(), fBudget: new Set(), fRating: new Set(),
   excludeFamily: false, keyword: '', sortKey: 'dist', pickMode: false,
 };
 
@@ -702,6 +714,7 @@ buildChips('budgetChips', BUDGETS, state.fBudget);
 buildChips('moodChips', MOODS, state.fMood);
 buildChips('useChips', USES, state.fUse);
 buildChips('facilityChips', FACILITIES, state.fFacility);
+buildChips('ratingChips', RATINGS, state.fRating);
 
 function updateGroupBadges() {
   for (const region in REGION_GENRES) {
@@ -867,7 +880,7 @@ async function fetchShops() {
       petOk: !!(sh.pet && sh.pet !== '不可'), barrierFree: sh.barrier_free === 'あり',
       capacity: sh.capacity ? parseInt(sh.capacity, 10) : 0,
       shopDetailMemo: sh.shop_detail_memo || '', otherMemo: sh.other_memo || '', budgetMemo: sh.budget_memo || '',
-      access: sh.access || '',
+      access: sh.access || '', rating: null, ratingCount: 0, googleMapsUri: '',
     };
     shop.searchText = [shop.name, shop.genreName, shop.catch, shop.shopDetailMemo, shop.otherMemo, shop.budgetMemo].join(' ');
     shop.genre = refineGenre(shop);
@@ -883,8 +896,73 @@ async function fetchShops() {
   state.resultsAvailable = data.results.results_available || hpShops.length;
   showStatus('spinner', 'ホットペッパー未掲載の店舗も補完しています…');
   const osmShops = await fetchOsmSupplement(state.origin, r, hpShops).catch(() => []);
-  state.shops = hpShops.concat(osmShops).sort((a, b) => a.distM - b.distM);
+  const allShops = hpShops.concat(osmShops);
+  showStatus('spinner', 'Googleの評価情報を確認しています…');
+  const googleShops = await fetchGooglePlacesEnrichment(state.origin, r, allShops).catch(() => []);
+  state.shops = allShops.concat(googleShops).sort((a, b) => a.distM - b.distM);
   render();
+}
+
+/* ===== Google Places APIによる評価情報の補完 =====
+   既存店舗に実際の星評価・口コミ件数を付与し、どちらにも無い店舗は新規追加する。
+   Worker側で月間呼び出し回数に安全な上限を設けており、上限に達すると自動的にスキップされる(課金は発生しない)。 */
+const GOOGLE_TYPE_TO_GENRE = {
+  ramen_restaurant:'G013', japanese_restaurant:'G004', sushi_restaurant:'G004',
+  japanese_izakaya_restaurant:'G001', chinese_restaurant:'chinese_general', taiwanese_restaurant:'taiwan',
+  korean_restaurant:'korea', thai_restaurant:'thai', vietnamese_restaurant:'vietnam',
+  indian_restaurant:'india', mexican_restaurant:'mexico', turkish_restaurant:'turkey',
+  pizza_restaurant:'italian', italian_restaurant:'italian', french_restaurant:'france',
+  steak_house:'yakiniku', barbecue_restaurant:'yakiniku',
+  cafe:'G014', coffee_shop:'G014', bakery:'G014', dessert_shop:'G014',
+  bar:'G012', fast_food_restaurant:'G015', hamburger_restaurant:'G015',
+};
+async function fetchGooglePlacesEnrichment(origin, radiusM, existingShops) {
+  const params = new URLSearchParams({ lat: origin.lat, lng: origin.lon, radius: String(Math.min(radiusM, 3000)) });
+  let data;
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/places-nearby?${params.toString()}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    data = await res.json();
+  } catch (e) { return []; }
+  if (!data || data.capped || !Array.isArray(data.places)) return [];
+
+  const added = [];
+  data.places.forEach(p => {
+    if (!p.location || !p.displayName) return;
+    if ((p.types || []).includes('lodging')) return;
+    const lat = p.location.latitude, lon = p.location.longitude;
+    const match = existingShops.find(s => distKm(s.lat, s.lon, lat, lon) * 1000 < 60);
+    if (match) {
+      match.rating = p.rating || null;
+      match.ratingCount = p.userRatingCount || 0;
+      match.googleMapsUri = p.googleMapsUri || '';
+      return;
+    }
+    const distM = distKm(origin.lat, origin.lon, lat, lon) * 1000;
+    if (distM > radiusM) return;
+    const shop = {
+      id: 'google-' + p.id, name: p.displayName.text, lat, lon, source: 'google',
+      baseGenreCode: GOOGLE_TYPE_TO_GENRE[p.primaryType] || 'G015', genreName: '', catch: '',
+      budgetCode: '', budgetLabel: '情報なし',
+      distM: Math.round(distM), walkMin: Math.max(1, Math.ceil(distM / 80)),
+      address: '', open: '', close: '', photo: '', shopUrl: p.googleMapsUri || null, couponUrl: null,
+      privateRoom: false, freeFood: false, freeDrink: false, nonSmoking: null, card: null,
+      lunch: false, tatami: false, horigotatsu: false, wifi: false, child: false,
+      charter: false, midnightOpen: false, englishOk: false, petOk: false, barrierFree: false,
+      capacity: 0, shopDetailMemo: '', otherMemo: '', budgetMemo: '', access: '',
+      rating: p.rating || null, ratingCount: p.userRatingCount || 0, googleMapsUri: p.googleMapsUri || '',
+    };
+    shop.genre = refineGenre(shop);
+    shop.searchText = shop.name;
+    shop.moods = estimateMoods(shop);
+    shop.uses = estimateUses(shop);
+    shop.family = isFamilyRestaurant(shop);
+    shop.summaryText = 'Googleマップで見つかった店舗です。ホットペッパー・地図データ双方に未掲載のため詳細情報は少なめです。';
+    shop.summaryCaution = '';
+    shop.searchText += ' ' + shop.summaryText;
+    added.push(shop);
+  });
+  return added;
 }
 
 /* ===== OpenStreetMapによる補完取得 =====
@@ -944,6 +1022,7 @@ out center tags;`;
       lunch: false, tatami: false, horigotatsu: false, wifi: false, child: false,
       charter: false, midnightOpen: false, englishOk: false, petOk: false, barrierFree: false,
       capacity: 0, shopDetailMemo: '', otherMemo: '', budgetMemo: '', access: '',
+      rating: null, ratingCount: 0, googleMapsUri: '',
     };
     shop.genre = refineGenre(shop);
     shop.searchText = [shop.name, shop.genreName].join(' ');
@@ -973,6 +1052,7 @@ function filtered() {
       (state.fMood.size === 0 || s.moods.some(m => state.fMood.has(m))) &&
       (state.fUse.size === 0 || s.uses.some(u => state.fUse.has(u))) &&
       (state.fFacility.size === 0 || [...state.fFacility].every(k => s[k])) &&
+      (state.fRating.size === 0 || (s.rating != null && [...state.fRating].every(r => s.rating >= parseFloat(r)))) &&
       (!state.excludeFamily || !s.family) &&
       (!kw || s.searchText.toLowerCase().includes(kw) || genreOf(s.genre).label.toLowerCase().includes(kw));
   });
@@ -980,6 +1060,7 @@ function filtered() {
 function sortList(list) {
   const arr = list.slice();
   if (state.sortKey === 'dist') arr.sort((a, b) => a.distM - b.distM);
+  else if (state.sortKey === 'ratingDesc') arr.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   else if (state.sortKey === 'budgetAsc') arr.sort((a, b) => budgetMid(a) - budgetMid(b));
   else if (state.sortKey === 'budgetDesc') arr.sort((a, b) => budgetMid(b) - budgetMid(a));
   else if (state.sortKey === 'name') arr.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
@@ -1024,7 +1105,7 @@ function render() {
     card.className = 'shop-card';
     card.dataset.id = s.id;
     card.style.animationDelay = Math.min(i * 0.06, 0.8) + 's';
-    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + ' ' + s.lat + ',' + s.lon)}`;
+    const gmapsUrl = s.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + ' ' + s.lat + ',' + s.lon)}`;
     const hoursText = s.open ? escapeHtml(s.open) : '営業時間情報なし';
     const closeText = s.close ? `<br>🚫 定休日: ${escapeHtml(s.close)}` : '';
     const photoHtml = s.photo
@@ -1036,13 +1117,14 @@ function render() {
       <div class="shop-top">
         ${photoHtml}
         <div>
-          <div class="shop-name">${escapeHtml(s.name)}</div>
+          <div class="shop-name">${escapeHtml(s.name)}${s.rating != null ? ` <span style="color:#e0a83c; font-weight:700;">★${s.rating.toFixed(1)}</span><span style="color:var(--text-sub); font-size:0.78rem;">(${s.ratingCount}件)</span>` : ''}</div>
           <div class="shop-meta">${g.label} ・ ${s.distM}m<br>🕐 ${hoursText}${closeText}</div>
         </div>
       </div>
       <div class="shop-summary">${escapeHtml(s.summaryText)}${cautionHtml}</div>
       <div class="tags">
         ${s.source === 'osm' ? '<span class="tag">🗺️ OSM補完データ</span>' : ''}
+        ${s.source === 'google' ? '<span class="tag">📍 Google補完データ</span>' : ''}
         <span class="tag genre">${g.label}</span>
         <span class="tag budget">💰 ${escapeHtml(s.budgetLabel)}</span>
         ${s.moods.map(m => `<span class="tag mood">${moodMap[m]}</span>`).join('')}
