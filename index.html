@@ -364,6 +364,10 @@ footer a { color: var(--accent-primary); }
     <span class="filter-label">🪑 設備・条件（実データ）</span>
     <div class="chips" id="facilityChips"></div>
   </div>
+
+  <div class="filter-group" style="text-align:center; margin-top:22px;">
+    <button class="btn btn-primary" id="searchBtnBottom">🔍 さがす</button>
+  </div>
 </section>
 
 <div class="main-grid">
@@ -732,6 +736,7 @@ walkSlider.addEventListener('change', () => { if (state.origin) fetchShops(); })
 
 /* ===== 検索アクション ===== */
 document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('searchBtnBottom').addEventListener('click', doSearch);
 document.getElementById('addr').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 document.getElementById('geoBtn').addEventListener('click', () => {
