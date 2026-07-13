@@ -808,7 +808,7 @@ async function geocode(q) {
   return null;
 }
 async function geocodeGsi(q) {
-  const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
+  const r = await fetchWithTimeout('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q), {}, 8000);
   const d = await r.json();
   if (Array.isArray(d) && d.length > 0) {
     const [lon, lat] = d[0].geometry.coordinates;
@@ -817,7 +817,7 @@ async function geocodeGsi(q) {
   return null;
 }
 async function geocodeNominatim(q) {
-  const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&q=' + encodeURIComponent(q));
+  const r = await fetchWithTimeout('https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&q=' + encodeURIComponent(q), {}, 8000);
   const d = await r.json();
   if (d.length > 0) return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
   return null;
@@ -854,6 +854,17 @@ function toApiRange(meters) {
 }
 
 /* ===== ホットペッパーAPI取得 ===== */
+// タイムアウト付きfetch。サーバーが無応答のまま検索が永久に固まるのを防ぐ。
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchShops() {
   if (!state.origin) return;
   fetchedGoogleGenres.clear();
@@ -863,7 +874,7 @@ async function fetchShops() {
   const params = new URLSearchParams({ lat: state.origin.lat, lng: state.origin.lon, range: String(toApiRange(r)), _t: String(Date.now()) });
   let data = null;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/search?${params.toString()}`, { cache: 'no-store' });
+    const res = await fetchWithTimeout(`${WORKER_BASE}/api/search?${params.toString()}`, { cache: 'no-store' }, 20000);
     if (res.ok) data = await res.json();
   } catch (e) { /* エラー処理は下で */ }
   if (!data || !data.results) { showStatus('⚠️', 'お店データの取得に失敗しました。時間をおいて再度お試しください。'); return; }
@@ -961,20 +972,22 @@ function isSameShopName(a, b) {
   return shorter.length >= 3 && longer.includes(shorter);
 }
 async function fetchGooglePlacesEnrichment(origin, radiusM, existingShops) {
-  return fetchGooglePlaces(origin, radiusM, existingShops, null);
+  return fetchGooglePlaces(origin, radiusM, existingShops, null, null);
 }
-// genreKeyを指定すると、そのジャンル専用のGoogle検索を行う(20件の枠を分散させないため)
+// genreKeyを指定すると、そのジャンル専用のGoogle検索を行う(20件の枠を分散させないため)。
+// ジャンルを狙って検索しているので、新規追加分はそのジャンルをそのまま採用する
+// (GoogleのprimaryTypeは"restaurant"など汎用的な値になることが多く、そこから逆算すると分類を誤るため)
 async function fetchGoogleGenreSupplement(origin, radiusM, existingShops, genreKey) {
   const googleType = GENRE_TO_GOOGLE_TYPE[genreKey];
   if (!googleType) return [];
-  return fetchGooglePlaces(origin, radiusM, existingShops, googleType);
+  return fetchGooglePlaces(origin, radiusM, existingShops, googleType, genreKey);
 }
-async function fetchGooglePlaces(origin, radiusM, existingShops, googleType) {
+async function fetchGooglePlaces(origin, radiusM, existingShops, googleType, forceGenreKey) {
   const params = new URLSearchParams({ lat: origin.lat, lng: origin.lon, radius: String(Math.min(radiusM, 3000)) });
   if (googleType) params.set('type', googleType);
   let data;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/places-nearby?${params.toString()}`, { cache: 'no-store' });
+    const res = await fetchWithTimeout(`${WORKER_BASE}/api/places-nearby?${params.toString()}`, { cache: 'no-store' }, 12000);
     if (!res.ok) return [];
     data = await res.json();
   } catch (e) { return []; }
@@ -998,7 +1011,9 @@ async function fetchGooglePlaces(origin, radiusM, existingShops, googleType) {
     if (distM > radiusM) return;
     const shop = {
       id: 'google-' + p.id, name: p.displayName.text, lat, lon, source: 'google',
-      baseGenreCode: GOOGLE_TYPE_TO_GENRE[p.primaryType] || 'G015', genreName: '', catch: '',
+      baseGenreCode: forceGenreKey || GOOGLE_TYPE_TO_GENRE[p.primaryType] ||
+        (p.types || []).map(t => GOOGLE_TYPE_TO_GENRE[t]).find(Boolean) || 'G015',
+      genreName: '', catch: '',
       budgetCode: '', budgetLabel: '情報なし',
       distM: Math.round(distM), walkMin: Math.max(1, Math.ceil(distM / 80)),
       address: '', open: '', close: '', photo: '', shopUrl: p.googleMapsUri || null, couponUrl: null,
@@ -1050,7 +1065,7 @@ out center tags;`;
   let data = null;
   for (const ep of endpoints) {
     try {
-      const res = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      const res = await fetchWithTimeout(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }, 15000);
       if (!res.ok) continue;
       data = await res.json();
       break;
