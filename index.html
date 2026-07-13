@@ -691,24 +691,35 @@ map.on('click', e => {
 });
 
 /* ===== フィルターUI生成 ===== */
-function buildChips(elId, items, set, onChange) {
+function buildChips(elId, items, set, onChange, onToggleOn) {
   const box = document.getElementById(elId);
   items.forEach(it => {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = it.emoji ? `${it.emoji} ${it.label}` : it.label;
     b.addEventListener('click', () => {
+      let turnedOn = false;
       if (set.has(it.key)) { set.delete(it.key); b.classList.remove('on'); }
-      else { set.add(it.key); b.classList.add('on'); }
+      else { set.add(it.key); b.classList.add('on'); turnedOn = true; }
       if (onChange) onChange();
+      if (turnedOn && onToggleOn) onToggleOn(it.key);
       render();
     });
     box.appendChild(b);
   });
 }
-buildChips('genreChips', GENRES, state.fGenre);
+const fetchedGoogleGenres = new Set();
+function onGenreToggledOn(key) {
+  if (!state.origin || !GENRE_TO_GOOGLE_TYPE[key] || fetchedGoogleGenres.has(key)) return;
+  fetchedGoogleGenres.add(key);
+  const r = walkRadius();
+  fetchGoogleGenreSupplement(state.origin, r, state.shops, key).then(added => {
+    if (added.length) { state.shops = state.shops.concat(added); render(); }
+  });
+}
+buildChips('genreChips', GENRES, state.fGenre, null, onGenreToggledOn);
 for (const region in REGION_GENRES) {
-  buildChips('chips-' + region, REGION_GENRES[region], state.fGenre, updateGroupBadges);
+  buildChips('chips-' + region, REGION_GENRES[region], state.fGenre, updateGroupBadges, onGenreToggledOn);
 }
 buildChips('budgetChips', BUDGETS, state.fBudget);
 buildChips('moodChips', MOODS, state.fMood);
@@ -845,6 +856,7 @@ function toApiRange(meters) {
 /* ===== ホットペッパーAPI取得 ===== */
 async function fetchShops() {
   if (!state.origin) return;
+  fetchedGoogleGenres.clear();
   const r = walkRadius();
   if (walkCircle) { walkCircle.setRadius(Math.min(r, 3000)); map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] }); }
   showStatus('spinner', 'ちかくのお店をあつめています…（ジャンルを幅広く取得するため少し時間がかかります）');
@@ -916,8 +928,27 @@ const GOOGLE_TYPE_TO_GENRE = {
   cafe:'G014', coffee_shop:'G014', bakery:'G014', dessert_shop:'G014',
   bar:'G012', fast_food_restaurant:'G015', hamburger_restaurant:'G015',
 };
+// 内部ジャンルキー→Google Places専用タイプ（特定ジャンル選択時のピンポイント検索に使用）。
+// Googleは複数タイプ混在だと20件の枠が分散するため、単一タイプで問い合わせたほうがニッチな店を拾える。
+const GENRE_TO_GOOGLE_TYPE = {
+  G013:'ramen_restaurant', G004:'japanese_restaurant', G001:'japanese_izakaya_restaurant',
+  chinese_general:'chinese_restaurant', taiwan:'taiwanese_restaurant', korea:'korean_restaurant',
+  thai:'thai_restaurant', vietnam:'vietnamese_restaurant', india:'indian_restaurant',
+  mexico:'mexican_restaurant', turkey:'turkish_restaurant', italian:'italian_restaurant',
+  france:'french_restaurant', G014:'cafe', G012:'bar',
+};
 async function fetchGooglePlacesEnrichment(origin, radiusM, existingShops) {
+  return fetchGooglePlaces(origin, radiusM, existingShops, null);
+}
+// genreKeyを指定すると、そのジャンル専用のGoogle検索を行う(20件の枠を分散させないため)
+async function fetchGoogleGenreSupplement(origin, radiusM, existingShops, genreKey) {
+  const googleType = GENRE_TO_GOOGLE_TYPE[genreKey];
+  if (!googleType) return [];
+  return fetchGooglePlaces(origin, radiusM, existingShops, googleType);
+}
+async function fetchGooglePlaces(origin, radiusM, existingShops, googleType) {
   const params = new URLSearchParams({ lat: origin.lat, lng: origin.lon, radius: String(Math.min(radiusM, 3000)) });
+  if (googleType) params.set('type', googleType);
   let data;
   try {
     const res = await fetch(`${WORKER_BASE}/api/places-nearby?${params.toString()}`, { cache: 'no-store' });
