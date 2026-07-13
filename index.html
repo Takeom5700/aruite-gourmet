@@ -830,19 +830,19 @@ async function fetchShops() {
   const r = walkRadius();
   if (walkCircle) { walkCircle.setRadius(Math.min(r, 3000)); map.fitBounds(walkCircle.getBounds(), { padding: [20, 20] }); }
   showStatus('spinner', 'ちかくのお店をあつめています…（ジャンルを幅広く取得するため少し時間がかかります）');
-  const params = new URLSearchParams({ lat: state.origin.lat, lng: state.origin.lon, range: String(toApiRange(r)) });
+  const params = new URLSearchParams({ lat: state.origin.lat, lng: state.origin.lon, range: String(toApiRange(r)), _t: String(Date.now()) });
   let data = null;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/search?${params.toString()}`);
+    const res = await fetch(`${WORKER_BASE}/api/search?${params.toString()}`, { cache: 'no-store' });
     if (res.ok) data = await res.json();
   } catch (e) { /* エラー処理は下で */ }
   if (!data || !data.results) { showStatus('⚠️', 'お店データの取得に失敗しました。時間をおいて再度お試しください。'); return; }
   const shopList = data.results.shop || [];
-  state.shops = shopList.map(sh => {
+  const hpShops = shopList.map(sh => {
     const lat = parseFloat(sh.lat), lon = parseFloat(sh.lng);
     const distM = distKm(state.origin.lat, state.origin.lon, lat, lon) * 1000;
     const shop = {
-      id: sh.id, name: sh.name, lat, lon,
+      id: sh.id, name: sh.name, lat, lon, source: 'hotpepper',
       baseGenreCode: sh.genre ? sh.genre.code : 'G015',
       genreName: sh.genre ? sh.genre.name : '',
       catch: sh.catch || (sh.genre && sh.genre.catch) || '',
@@ -873,9 +873,84 @@ async function fetchShops() {
     shop.summaryText = s.text; shop.summaryCaution = s.caution;
     shop.searchText += ' ' + shop.summaryText;
     return shop;
-  }).filter(s => s.lat && s.lon && s.distM <= r).sort((a, b) => a.distM - b.distM);
-  state.resultsAvailable = data.results.results_available || state.shops.length;
+  }).filter(s => s.lat && s.lon && s.distM <= r);
+
+  state.resultsAvailable = data.results.results_available || hpShops.length;
+  showStatus('spinner', 'ホットペッパー未掲載の店舗も補完しています…');
+  const osmShops = await fetchOsmSupplement(state.origin, r, hpShops).catch(() => []);
+  state.shops = hpShops.concat(osmShops).sort((a, b) => a.distM - b.distM);
   render();
+}
+
+/* ===== OpenStreetMapによる補完取得 =====
+   ホットペッパーに未掲載の個人経営店・隠れ家的な店を拾うための補完データ源。
+   HotPepperの結果と近接(60m以内)する店舗は重複とみなして除外する。 */
+const OSM_CUISINE_TO_GENRE = {
+  japanese:'G004', teishoku:'G004', tempura:'G004', tonkatsu:'G004', unagi:'G004', sushi:'G004',
+  ramen:'G013', noodle:'G013', udon:'G013', soba:'G013',
+  yakiniku:'yakiniku', barbecue:'yakiniku', yakitori:'yakitori',
+  izakaya:'G001', chinese:'chinese_general', taiwanese:'taiwan',
+  coffee_shop:'G014', cake:'G014', dessert:'G014',
+  burger:'G015', chicken:'G015',
+  italian:'italian', pizza:'italian', pasta:'italian', french:'france',
+  thai:'thai', vietnamese:'vietnam', indian:'india', korean:'korea',
+};
+function osmGenre(tags) {
+  const cuisine = (tags.cuisine || '').toLowerCase().split(';')[0].trim();
+  if (OSM_CUISINE_TO_GENRE[cuisine]) return OSM_CUISINE_TO_GENRE[cuisine];
+  if (tags.amenity === 'cafe') return 'G014';
+  if (tags.amenity === 'bar' || tags.amenity === 'pub') return 'G012';
+  if (tags.amenity === 'fast_food') return 'G015';
+  return 'G015';
+}
+async function fetchOsmSupplement(origin, radiusM, hpShops) {
+  const q = `[out:json][timeout:20];
+nwr["amenity"~"^(restaurant|cafe|bar|pub|fast_food)$"]["name"](around:${Math.round(radiusM)},${origin.lat},${origin.lon});
+out center tags;`;
+  const endpoints = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  let data = null;
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      if (!res.ok) continue;
+      data = await res.json();
+      break;
+    } catch (e) { /* 次のミラーへ */ }
+  }
+  if (!data) return [];
+  const out = [];
+  for (const el of data.elements) {
+    const lat = el.lat !== undefined ? el.lat : (el.center && el.center.lat);
+    const lon = el.lon !== undefined ? el.lon : (el.center && el.center.lon);
+    const tags = el.tags || {};
+    if (lat === undefined || lon === undefined || !tags.name) continue;
+    const distM = distKm(origin.lat, origin.lon, lat, lon) * 1000;
+    if (distM > radiusM) continue;
+    const isDup = hpShops.some(h => distKm(h.lat, h.lon, lat, lon) * 1000 < 60);
+    if (isDup) continue;
+    const shop = {
+      id: 'osm-' + el.type + '/' + el.id, name: tags.name, lat, lon, source: 'osm',
+      baseGenreCode: osmGenre(tags), genreName: '', catch: '',
+      budgetCode: '', budgetLabel: '情報なし',
+      distM: Math.round(distM), walkMin: Math.max(1, Math.ceil(distM / 80)),
+      address: '', open: tags.opening_hours || '', close: '',
+      photo: '', shopUrl: null, couponUrl: null,
+      privateRoom: false, freeFood: false, freeDrink: false, nonSmoking: null, card: null,
+      lunch: false, tatami: false, horigotatsu: false, wifi: false, child: false,
+      charter: false, midnightOpen: false, englishOk: false, petOk: false, barrierFree: false,
+      capacity: 0, shopDetailMemo: '', otherMemo: '', budgetMemo: '', access: '',
+    };
+    shop.genre = refineGenre(shop);
+    shop.searchText = [shop.name, shop.genreName].join(' ');
+    shop.moods = estimateMoods(shop);
+    shop.uses = estimateUses(shop);
+    shop.family = isFamilyRestaurant(shop);
+    shop.summaryText = '地図データ(OpenStreetMap)で見つかった店舗です。ホットペッパー未掲載のため詳細情報は少なめです。公式サイトやGoogleマップでご確認ください。';
+    shop.summaryCaution = '';
+    shop.searchText += ' ' + shop.summaryText;
+    out.push(shop);
+  }
+  return out;
 }
 
 function distKm(a, b, c, d) {
@@ -910,9 +985,10 @@ function render() {
   if (!state.origin) return;
   const list = sortList(filtered());
   const cards = document.getElementById('cards');
-  const capNote = state.resultsAvailable > state.shops.length ? `（データ提供元全${state.resultsAvailable}件のうちジャンル横断で${state.shops.length}件を取得）` : '';
+  const osmCount = state.shops.filter(s => s.source === 'osm').length;
+  const osmNote = osmCount ? `（うちOSM補完${osmCount}件）` : '';
   document.getElementById('count').textContent =
-    `${list.length}件表示 / 取得${state.shops.length}件${capNote}（${state.origin.label}から徒歩${walkSlider.value}分圏、API上限3,000m）`;
+    `${list.length}件表示 / 取得${state.shops.length}件${osmNote}（${state.origin.label}から徒歩${walkSlider.value}分圏、API上限3,000m）`;
 
   markerLayer.clearLayers();
   Object.keys(markerById).forEach(k => delete markerById[k]);
@@ -961,6 +1037,7 @@ function render() {
       </div>
       <div class="shop-summary">${escapeHtml(s.summaryText)}${cautionHtml}</div>
       <div class="tags">
+        ${s.source === 'osm' ? '<span class="tag">🗺️ OSM補完データ</span>' : ''}
         <span class="tag genre">${g.label}</span>
         <span class="tag budget">💰 ${escapeHtml(s.budgetLabel)}</span>
         ${s.moods.map(m => `<span class="tag mood">${moodMap[m]}</span>`).join('')}
