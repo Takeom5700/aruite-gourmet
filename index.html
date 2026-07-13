@@ -942,18 +942,34 @@ const GOOGLE_TYPE_TO_GENRE = {
   korean_restaurant:'korea', thai_restaurant:'thai', vietnamese_restaurant:'vietnam',
   indian_restaurant:'india', mexican_restaurant:'mexico', turkish_restaurant:'turkey',
   pizza_restaurant:'italian', italian_restaurant:'italian', french_restaurant:'france',
-  steak_house:'yakiniku', barbecue_restaurant:'yakiniku',
+  steak_house:'yakiniku', barbecue_restaurant:'yakiniku', korean_barbecue_restaurant:'yakiniku',
+  yakitori_restaurant:'yakitori',
+  german_restaurant:'germany', spanish_restaurant:'spain', portuguese_restaurant:'portugal',
+  british_restaurant:'uk', american_restaurant:'usa',
+  brazilian_restaurant:'brazil', peruvian_restaurant:'peru',
+  lebanese_restaurant:'lebanon', middle_eastern_restaurant:'mideast_other',
+  ethiopian_restaurant:'ethiopia', moroccan_restaurant:'morocco',
+  malaysian_restaurant:'malay_indo', indonesian_restaurant:'malay_indo', filipino_restaurant:'philippines',
   cafe:'G014', coffee_shop:'G014', bakery:'G014', dessert_shop:'G014',
-  bar:'G012', fast_food_restaurant:'G015', hamburger_restaurant:'G015',
+  bar:'G012', fast_food_restaurant:'G015', hamburger_restaurant:'G015', karaoke:'G011',
 };
 // 内部ジャンルキー→Google Places専用タイプ（特定ジャンル選択時のピンポイント検索に使用）。
 // Googleは複数タイプ混在だと20件の枠が分散するため、単一タイプで問い合わせたほうがニッチな店を拾える。
+// (お好み焼き・もんじゃ、ダイニングバー、創作料理、フィンランド、オーストラリア、シンガポールはGoogleに専用typeが無いため対象外)
 const GENRE_TO_GOOGLE_TYPE = {
   G013:'ramen_restaurant', G004:'japanese_restaurant', G001:'japanese_izakaya_restaurant',
   chinese_general:'chinese_restaurant', taiwan:'taiwanese_restaurant', korea:'korean_restaurant',
   thai:'thai_restaurant', vietnam:'vietnamese_restaurant', india:'indian_restaurant',
   mexico:'mexican_restaurant', turkey:'turkish_restaurant', italian:'italian_restaurant',
   france:'french_restaurant', G014:'cafe', G012:'bar',
+  yakiniku:'korean_barbecue_restaurant', yakitori:'yakitori_restaurant',
+  germany:'german_restaurant', spain:'spanish_restaurant', portugal:'portuguese_restaurant',
+  uk:'british_restaurant', usa:'american_restaurant',
+  brazil:'brazilian_restaurant', peru:'peruvian_restaurant',
+  lebanon:'lebanese_restaurant', mideast_other:'middle_eastern_restaurant',
+  ethiopia:'ethiopian_restaurant', morocco:'moroccan_restaurant',
+  malay_indo:'malaysian_restaurant', philippines:'filipino_restaurant',
+  G011:'karaoke',
 };
 // 店名の正規化(全角/半角・空白・記号の揺れを吸収してから比較する)
 function normalizeShopName(name) {
