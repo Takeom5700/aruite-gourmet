@@ -551,6 +551,24 @@ const BUDGETS = [
   { key: 'B013', label: '¥20,001〜' },
 ];
 function budgetMid(shop) { return BUDGET_MID[shop.budgetCode] || 2000; }
+// Google Places の priceRange(実際の円額)から、最も近いホットペッパー予算コードを逆算する
+function yenToBudgetCode(yen) {
+  let bestKey = null, bestDiff = Infinity;
+  for (const key in BUDGET_MID) {
+    const diff = Math.abs(BUDGET_MID[key] - yen);
+    if (diff < bestDiff) { bestDiff = diff; bestKey = key; }
+  }
+  return bestKey;
+}
+function googlePriceMidYen(p) {
+  if (!p.priceRange) return null;
+  const toYen = m => m ? parseInt(m.units || '0', 10) + (m.nanos || 0) / 1e9 : null;
+  const lo = toYen(p.priceRange.startPrice), hi = toYen(p.priceRange.endPrice);
+  if (lo == null && hi == null) return null;
+  if (lo == null) return hi;
+  if (hi == null) return lo;
+  return (lo + hi) / 2;
+}
 
 /* ===== 雰囲気・用途の判定基準 =====
    1) お店の紹介文・キャッチコピー中の明示的なキーワード（最も信頼できる根拠）
@@ -1017,20 +1035,28 @@ async function fetchGooglePlaces(origin, radiusM, existingShops, googleType, for
     // 密集地では60m以内に無関係な店が何十件もあるため、距離だけでなく店名の一致もチェックする
     // (でないと全く別の店にGoogleの評価を誤って付けてしまう)
     const match = existingShops.find(s => distKm(s.lat, s.lon, lat, lon) * 1000 < 40 && isSameShopName(s.name, p.displayName.text));
+    const googleYen = googlePriceMidYen(p);
     if (match) {
       match.rating = p.rating || null;
       match.ratingCount = p.userRatingCount || 0;
       match.googleMapsUri = p.googleMapsUri || '';
+      // HotPepper/OSMに予算情報が無い店舗は、Googleの実際の価格帯で補完する
+      if (!match.budgetCode && googleYen != null) {
+        match.budgetCode = yenToBudgetCode(googleYen);
+        match.budgetLabel = BUDGETS.find(b => b.key === match.budgetCode)?.label + '(Google目安)' || match.budgetLabel;
+      }
       return;
     }
     const distM = distKm(origin.lat, origin.lon, lat, lon) * 1000;
     if (distM > radiusM) return;
+    const googleBudgetCode = googleYen != null ? yenToBudgetCode(googleYen) : null;
     const shop = {
       id: 'google-' + p.id, name: p.displayName.text, lat, lon, source: 'google',
       baseGenreCode: forceGenreKey || GOOGLE_TYPE_TO_GENRE[p.primaryType] ||
         (p.types || []).map(t => GOOGLE_TYPE_TO_GENRE[t]).find(Boolean) || 'G015',
       genreName: '', catch: '',
-      budgetCode: '', budgetLabel: '情報なし',
+      budgetCode: googleBudgetCode || '',
+      budgetLabel: googleBudgetCode ? (BUDGETS.find(b => b.key === googleBudgetCode)?.label + '(Google目安)') : '情報なし',
       distM: Math.round(distM), walkMin: Math.max(1, Math.ceil(distM / 80)),
       address: '', open: '', close: '', photo: '', shopUrl: p.googleMapsUri || null, couponUrl: null,
       privateRoom: false, freeFood: false, freeDrink: false, nonSmoking: null, card: null,
