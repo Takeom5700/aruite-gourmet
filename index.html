@@ -913,6 +913,13 @@ async function fetchShops() {
   const googleShops = await fetchGooglePlacesEnrichment(state.origin, r, allShops).catch(() => []);
   state.shops = allShops.concat(googleShops).sort((a, b) => a.distM - b.distM);
   render();
+
+  // 既に選択中のジャンルチップがあれば、その場でジャンル専用のピンポイント検索も行う
+  // (チップをONにした瞬間だけ発火する仕組みだと、選択済みのまま別の場所を検索し直した際に
+  //  そのジャンルの補完が漏れてしまうため)
+  for (const key of state.fGenre) {
+    if (GENRE_TO_GOOGLE_TYPE[key]) onGenreToggledOn(key);
+  }
 }
 
 /* ===== Google Places APIによる評価情報の補完 =====
@@ -937,6 +944,22 @@ const GENRE_TO_GOOGLE_TYPE = {
   mexico:'mexican_restaurant', turkey:'turkish_restaurant', italian:'italian_restaurant',
   france:'french_restaurant', G014:'cafe', G012:'bar',
 };
+// 店名の正規化(全角/半角・空白・記号の揺れを吸収してから比較する)
+function normalizeShopName(name) {
+  return String(name)
+    .toLowerCase()
+    .replace(/[\s　・･\-–—'’"".,、。()（）\[\]【】!！?？]/g, '')
+    .normalize('NFKC');
+}
+function isSameShopName(a, b) {
+  const na = normalizeShopName(a), nb = normalizeShopName(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  // 片方がもう片方に十分な長さで含まれていれば同一店舗とみなす(店舗名の一部表記違いを許容)
+  const shorter = na.length <= nb.length ? na : nb;
+  const longer = na.length <= nb.length ? nb : na;
+  return shorter.length >= 3 && longer.includes(shorter);
+}
 async function fetchGooglePlacesEnrichment(origin, radiusM, existingShops) {
   return fetchGooglePlaces(origin, radiusM, existingShops, null);
 }
@@ -962,7 +985,9 @@ async function fetchGooglePlaces(origin, radiusM, existingShops, googleType) {
     if (!p.location || !p.displayName) return;
     if ((p.types || []).includes('lodging')) return;
     const lat = p.location.latitude, lon = p.location.longitude;
-    const match = existingShops.find(s => distKm(s.lat, s.lon, lat, lon) * 1000 < 60);
+    // 密集地では60m以内に無関係な店が何十件もあるため、距離だけでなく店名の一致もチェックする
+    // (でないと全く別の店にGoogleの評価を誤って付けてしまう)
+    const match = existingShops.find(s => distKm(s.lat, s.lon, lat, lon) * 1000 < 40 && isSameShopName(s.name, p.displayName.text));
     if (match) {
       match.rating = p.rating || null;
       match.ratingCount = p.userRatingCount || 0;
@@ -1040,7 +1065,8 @@ out center tags;`;
     if (lat === undefined || lon === undefined || !tags.name) continue;
     const distM = distKm(origin.lat, origin.lon, lat, lon) * 1000;
     if (distM > radiusM) continue;
-    const isDup = hpShops.some(h => distKm(h.lat, h.lon, lat, lon) * 1000 < 60);
+    // 密集地では60m以内に無関係な店が多数あるため、距離だけでなく店名も一致する場合のみ重複とみなす
+    const isDup = hpShops.some(h => distKm(h.lat, h.lon, lat, lon) * 1000 < 40 && isSameShopName(h.name, tags.name));
     if (isDup) continue;
     const shop = {
       id: 'osm-' + el.type + '/' + el.id, name: tags.name, lat, lon, source: 'osm',
