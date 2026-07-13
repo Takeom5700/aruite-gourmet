@@ -402,7 +402,7 @@ footer a { color: var(--accent-primary); }
   データ提供: <a href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener">Powered by ホットペッパーグルメ Webサービス</a><br>
   店舗の写真はホットペッパー掲載の代表写真1枚です（内装・料理などどの写真かはデータ上区別できません）。すべての写真はお店のホットペッパーページでご覧いただけます。<br>
   お店の要約文はホットペッパー掲載のキャッチコピー・お店からのメモ・設備データを組み合わせて自動生成しています。ジャンルの国別分類・雰囲気・用途は店舗名や紹介文からの自動推定のため、実際と異なる場合があります。予算・営業時間・個室・食べ放題／飲み放題・クーポン・貸切可否等はホットペッパー掲載の実データです。<br>
-  ホットペッパー・地図データ(OpenStreetMap)双方に無い店舗はGoogleマップの情報で補完し、星評価もGoogleの実データを表示しています（Google側の呼び出し回数には安全のため月間の上限を設けており、上限に達した場合は評価情報の取得を一時的に休止します）。<br>
+  ホットペッパー・地図データ(OpenStreetMap)双方に無い店舗はGoogleマップの情報で補完し、星評価・予算目安もGoogleの実データを表示しています。これらの店舗の説明文はGoogleの紹介文・実際の口コミから自動生成しています（Google側の呼び出し回数には安全のため月間の上限を設けており、上限に達した場合は評価情報の取得を一時的に休止します）。<br>
   徒歩時間は 80m/分（不動産表記基準）の直線距離換算です。
 </footer>
 </div>
@@ -682,6 +682,31 @@ function buildSummary(shop) {
   if (shop.card === false) cautions.push('カード利用不可の場合あり');
   const summary = parts.join(' ');
   return { text: summary || 'この店舗の詳細情報は掲載ページでご確認ください。', caution: cautions.join(' / ') };
+}
+
+// Googleのみで見つかった店舗向け: Google自身の紹介文(editorialSummary)と実際の口コミ(reviews)から要約を生成する
+function buildGoogleSummary(p) {
+  const parts = [];
+  if (p.editorialSummary && p.editorialSummary.text) parts.push(p.editorialSummary.text.trim());
+  const reviews = (p.reviews || []).filter(r => r.text && r.text.text);
+  if (reviews.length) {
+    // 星評価が高く、かつある程度の長さがある口コミを代表として1件抜粋する
+    const pick = reviews.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+    const text = pick.text.text.trim().replace(/\s+/g, ' ');
+    const excerpt = text.length > 100 ? text.slice(0, 100) + '…' : text;
+    parts.push(`口コミより(★${pick.rating}): 「${excerpt}」`);
+  }
+  const cautions = [];
+  const lowRatingReview = reviews.find(r => (r.rating || 5) <= 2);
+  if (lowRatingReview) {
+    const text = lowRatingReview.text.text.trim().replace(/\s+/g, ' ');
+    cautions.push(`低評価の口コミもあります(★${lowRatingReview.rating}): 「${text.slice(0, 60)}${text.length > 60 ? '…' : ''}」`);
+  }
+  const summary = parts.join(' ');
+  return {
+    text: summary || 'Googleマップで見つかった店舗です。ホットペッパー・地図データ双方に未掲載のため詳細情報は少なめです。',
+    caution: cautions.join(' / '),
+  };
 }
 
 /* ===== 状態 ===== */
@@ -1070,8 +1095,9 @@ async function fetchGooglePlaces(origin, radiusM, existingShops, googleType, for
     shop.moods = estimateMoods(shop);
     shop.uses = estimateUses(shop);
     shop.family = isFamilyRestaurant(shop);
-    shop.summaryText = 'Googleマップで見つかった店舗です。ホットペッパー・地図データ双方に未掲載のため詳細情報は少なめです。';
-    shop.summaryCaution = '';
+    const gs = buildGoogleSummary(p);
+    shop.summaryText = gs.text;
+    shop.summaryCaution = gs.caution;
     shop.searchText += ' ' + shop.summaryText;
     added.push(shop);
   });
